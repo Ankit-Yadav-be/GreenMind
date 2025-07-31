@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 
 const ReportWaste = () => {
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState([]);
   const [imageUrl, setImageUrl] = useState('');
   const [location, setLocation] = useState({ lat: null, lng: null });
   const [formDetails, setFormDetails] = useState({

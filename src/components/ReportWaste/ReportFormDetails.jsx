@@ -6,7 +6,21 @@ import {
   Textarea,
   Select,
   useColorModeValue,
+  Text,
+  Flex,
+  Tooltip,
+  Icon,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverBody,
+  PopoverArrow,
 } from '@chakra-ui/react';
+import { InfoIcon } from '@chakra-ui/icons';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion(Box);
 
 const ReportFormDetails = ({ formDetails, setFormDetails }) => {
   const handleChange = (e) => {
@@ -24,7 +38,7 @@ const ReportFormDetails = ({ formDetails, setFormDetails }) => {
   );
 
   return (
-    <Box
+    <MotionBox
       mt={6}
       p={6}
       bg={bg}
@@ -33,16 +47,27 @@ const ReportFormDetails = ({ formDetails, setFormDetails }) => {
       border="1px solid"
       borderColor="gray.700"
       transition="all 0.3s"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
     >
+      {/* Description Field */}
       <FormControl mb={6} isRequired>
-        <FormLabel color={labelColor} fontSize="lg">
-          Description
-        </FormLabel>
+        <Flex align="center" justify="space-between" mb={1}>
+          <FormLabel color={labelColor} fontSize="lg">
+            Description
+          </FormLabel>
+          <Tooltip label="Max 300 characters" hasArrow>
+            <Text fontSize="sm" color="gray.400">
+              {formDetails.description.length}/300
+            </Text>
+          </Tooltip>
+        </Flex>
         <Textarea
           name="description"
           placeholder="Describe the waste issue clearly..."
           value={formDetails.description}
           onChange={handleChange}
+          maxLength={300}
           resize="vertical"
           bg={inputBg}
           color="white"
@@ -55,10 +80,28 @@ const ReportFormDetails = ({ formDetails, setFormDetails }) => {
         />
       </FormControl>
 
+      {/* Category Field */}
       <FormControl isRequired>
-        <FormLabel color={labelColor} fontSize="lg">
-          Category
-        </FormLabel>
+        <Flex align="center" justify="space-between" mb={1}>
+          <FormLabel color={labelColor} fontSize="lg">
+            Category
+          </FormLabel>
+          <Popover placement="top-end">
+            <PopoverTrigger>
+              <Icon as={InfoIcon} color="gray.400" cursor="pointer" />
+            </PopoverTrigger>
+            <PopoverContent bg="gray.700" color="white" border="none">
+              <PopoverArrow />
+              <PopoverHeader fontWeight="bold">Category Info</PopoverHeader>
+              <PopoverBody fontSize="sm">
+                🧴 Plastic: Bottles, bags, etc.<br />
+                🍃 Organic: Food, leaves, etc.<br />
+                🔌 E-waste: Phones, batteries, etc.<br />
+                🧩 Other: Miscellaneous
+              </PopoverBody>
+            </PopoverContent>
+          </Popover>
+        </Flex>
         <Select
           name="category"
           placeholder="Choose waste category"
@@ -87,7 +130,7 @@ const ReportFormDetails = ({ formDetails, setFormDetails }) => {
           </option>
         </Select>
       </FormControl>
-    </Box>
+    </MotionBox>
   );
 };
 

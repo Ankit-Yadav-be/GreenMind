@@ -7,17 +7,24 @@ import {
   Image,
   Icon,
   useColorModeValue,
+  SimpleGrid,
+  Flex,
+  IconButton,
 } from '@chakra-ui/react';
-import { FiUploadCloud } from 'react-icons/fi';
+import { FiUploadCloud, FiTrash2 } from 'react-icons/fi';
 
 const ImageUpload = ({ selectedFile, setSelectedFile }) => {
   const inputRef = useRef();
 
   const handleImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+    const files = Array.from(e.target.files);
+    setSelectedFile((prev) => [...prev, ...files]);
+  };
+
+  const handleRemove = (index) => {
+    const updated = [...selectedFile];
+    updated.splice(index, 1);
+    setSelectedFile(updated);
   };
 
   const borderColor = useColorModeValue('gray.300', 'gray.600');
@@ -40,6 +47,7 @@ const ImageUpload = ({ selectedFile, setSelectedFile }) => {
       <Input
         type="file"
         accept="image/*"
+        multiple
         ref={inputRef}
         display="none"
         onChange={handleImageSelect}
@@ -49,37 +57,54 @@ const ImageUpload = ({ selectedFile, setSelectedFile }) => {
         leftIcon={<Icon as={FiUploadCloud} boxSize={5} />}
         bgGradient="linear(to-r, teal.400, blue.500)"
         color="white"
-        _hover={{ bgGradient: 'linear(to-r, teal.500, blue.600)', transform: 'scale(1.03)' }}
+        _hover={{
+          bgGradient: 'linear(to-r, teal.500, blue.600)',
+          transform: 'scale(1.03)',
+        }}
         size="lg"
         borderRadius="lg"
         onClick={() => inputRef.current.click()}
         mb={4}
         transition="all 0.2s"
       >
-        Upload Image
+        Upload Images
       </Button>
 
-      {selectedFile && (
-        <Box
-          mt={6}
-          p={4}
-          bg={previewBg}
-          borderRadius="md"
-          boxShadow="lg"
-          transition="0.3s"
-        >
-          <Text fontWeight="semibold" fontSize="lg" mb={2}>
+      {selectedFile.length > 0 && (
+        <Box mt={6}>
+          <Text fontWeight="bold" mb={4}>
             Preview
           </Text>
-          <Image
-            src={URL.createObjectURL(selectedFile)}
-            alt="Selected Preview"
-            maxH="280px"
-            mx="auto"
-            borderRadius="md"
-            boxShadow="md"
-            objectFit="cover"
-          />
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
+            {selectedFile.map((file, index) => (
+              <Box
+                key={index}
+                position="relative"
+                borderRadius="md"
+                boxShadow="md"
+                overflow="hidden"
+              >
+                <Image
+                  src={URL.createObjectURL(file)}
+                  alt={`Preview ${index}`}
+                  objectFit="cover"
+                  w="100%"
+                  h="200px"
+                  borderRadius="md"
+                />
+                <IconButton
+                  icon={<FiTrash2 />}
+                  aria-label="Remove Image"
+                  colorScheme="red"
+                  size="sm"
+                  position="absolute"
+                  top={2}
+                  right={2}
+                  onClick={() => handleRemove(index)}
+                />
+              </Box>
+            ))}
+          </SimpleGrid>
         </Box>
       )}
     </Box>

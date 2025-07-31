@@ -10,11 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chakra-ui/icon": "^3.2.0",
     "@chakra-ui/icons": "^2.2.4",
     "@chakra-ui/react": "^2.10.9",
+    "@chakra-ui/react-context": "^2.1.0",
+    "@chakra-ui/shared-utils": "^2.0.5",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "axios": "^1.11.0",
+    "chakra-ui-steps": "^2.2.0",
     "framer-motion": "^12.23.12",
     "leaflet": "^1.9.4",
     "react": "^19.1.0",
