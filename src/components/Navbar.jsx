@@ -32,7 +32,7 @@ const Links = [
   { label: 'Waste List', to: '/wastelist' },
   { label: 'Admin', to: '/admin', icon: FaUserShield },
 ];
-
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 const NavLink = ({ to, label, icon, isActive, onClick }) => (
   <Link
     as={RouterLink}
@@ -79,7 +79,7 @@ const Navbar = () => {
 
   const checkLoginStatus = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/check', {
+      const res = await fetch(`${BACKEND_URL}/api/auth/check`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -105,7 +105,7 @@ const Navbar = () => {
     console.log("Google User: ", decoded);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/google`, {
+      const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -15,10 +15,12 @@ const HeroSection = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
 
-  // 🟡 Check if cookie/session already exists
+
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
   const checkLoginStatus = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/check', {
+      const res = await fetch(`${BACKEND_URL}/api/auth/check`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -50,7 +52,7 @@ const HeroSection = () => {
     console.log("Google User: ", decoded);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/google`, {
+      const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -68,7 +70,6 @@ const HeroSection = () => {
       console.error("Error sending token to backend", err);
     }
   };
-
   return (
     <Box
       w="100%"
