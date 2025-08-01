@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Flex,
@@ -11,10 +11,19 @@ import {
   Text,
   Icon,
   Collapse,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  useToast,
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 import { FaPlusCircle, FaUserShield } from 'react-icons/fa';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 const Links = [
   { label: 'Home', to: '/' },
@@ -24,7 +33,7 @@ const Links = [
   { label: 'Admin', to: '/admin', icon: FaUserShield },
 ];
 
-const NavLink = ({ to, label, icon, isActive }) => (
+const NavLink = ({ to, label, icon, isActive, onClick }) => (
   <Link
     as={RouterLink}
     to={to}
@@ -44,6 +53,7 @@ const NavLink = ({ to, label, icon, isActive }) => (
       color: 'green.800',
       transform: 'scale(1.05)',
     }}
+    onClick={onClick}
   >
     {icon && <Icon as={icon} boxSize={4} />} {label}
   </Link>
@@ -51,7 +61,85 @@ const NavLink = ({ to, label, icon, isActive }) => (
 
 const Navbar = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isLoginOpen,
+    onOpen: onLoginOpen,
+    onClose: onLoginClose,
+  } = useDisclosure();
   const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [redirectPath, setRedirectPath] = useState(null);
+
+  // Check authentication status on mount
+  useEffect(() => {
+    checkLoginStatus();
+  }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/check', {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      setIsAuthenticated(data.isAuthenticated);
+    } catch (error) {
+      console.error("Login status check failed", error);
+    }
+  };
+
+  const handleNavClick = (path) => {
+    if (isAuthenticated) {
+      navigate(path);
+    } else {
+      setRedirectPath(path);
+      onLoginOpen();
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    const token = credentialResponse.credential;
+    const decoded = jwtDecode(token);
+    console.log("Google User: ", decoded);
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await res.json();
+      console.log("Backend response:", data);
+
+      if (res.ok) {
+        setIsAuthenticated(true);
+        onLoginClose();
+        toast({
+          title: "Login successful",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+        
+        if (redirectPath) {
+          navigate(redirectPath);
+        }
+      }
+    } catch (err) {
+      console.error("Error sending token to backend", err);
+      toast({
+        title: "Login failed",
+        description: "Please try again",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
 
   return (
     <Box
@@ -83,10 +171,11 @@ const Navbar = () => {
           {Links.map((link) => (
             <NavLink
               key={link.to}
-              to={link.to}
+              to={isAuthenticated ? link.to : '#'}
               label={link.label}
               icon={link.icon}
               isActive={location.pathname === link.to}
+              onClick={() => handleNavClick(link.to)}
             />
           ))}
         </HStack>
@@ -95,7 +184,7 @@ const Navbar = () => {
         <HStack display={{ base: 'none', md: 'flex' }}>
           <Button
             as={RouterLink}
-            to="/report"
+            to={isAuthenticated ? '/report' : '#'}
             colorScheme="green"
             leftIcon={<FaPlusCircle />}
             fontWeight="bold"
@@ -106,6 +195,7 @@ const Navbar = () => {
               color: 'white',
             }}
             transition="all 0.3s ease"
+            onClick={() => !isAuthenticated && handleNavClick('/report')}
           >
             Report Now
           </Button>
@@ -130,27 +220,53 @@ const Navbar = () => {
             {Links.map((link) => (
               <NavLink
                 key={link.to}
-                to={link.to}
+                to={isAuthenticated ? link.to : '#'}
                 label={link.label}
                 icon={link.icon}
                 isActive={location.pathname === link.to}
+                onClick={() => handleNavClick(link.to)}
               />
             ))}
             <Button
               as={RouterLink}
-              to="/report"
+              to={isAuthenticated ? '/report' : '#'}
               leftIcon={<FaPlusCircle />}
               colorScheme="green"
               fontWeight="bold"
               size="sm"
               w="full"
               mt={2}
+              onClick={() => !isAuthenticated && handleNavClick('/report')}
             >
               Report Now
             </Button>
           </Stack>
         </Box>
       </Collapse>
+
+      {/* Login Modal */}
+      <Modal isOpen={isLoginOpen} onClose={onLoginClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Login with Google</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody textAlign="center" pb={6}>
+            <GoogleLogin
+              onSuccess={handleGoogleLogin}
+              onError={() => {
+                console.log("Login Failed");
+                toast({
+                  title: "Login failed",
+                  description: "Please try again",
+                  status: "error",
+                  duration: 3000,
+                  isClosable: true,
+                });
+              }}
+            />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
