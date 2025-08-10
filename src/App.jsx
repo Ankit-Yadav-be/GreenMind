@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import MapPage from './pages/MapPage.jsx';
 
 import Home from './pages/Home';
 import ReportWaste from './pages/ReportWaste';
@@ -21,6 +22,7 @@ const App = () => {
         <Route path="/myreports" element={<MyReports />} />
         <Route path="/wastelist" element={<WasteList />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/map" element={<MapPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
