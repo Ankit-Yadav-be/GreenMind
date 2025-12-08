@@ -56,7 +56,7 @@ const RecenterMap = ({ lat, lng }) => {
   return null;
 };
 
-const LocationPicker = ({ location, setLocation }) => {
+const LocationPicker = ({ location, setLocation, onPlaceNameChange }) => {
   const [error, setError] = useState("");
   const [placeName, setPlaceName] = useState("");
   const toast = useToast();
@@ -98,12 +98,22 @@ const LocationPicker = ({ location, setLocation }) => {
       const data = await res.json();
       if (data && data.display_name) {
         setPlaceName(data.display_name);
+        // Pass place name to parent component
+        if (onPlaceNameChange) {
+          onPlaceNameChange(data.display_name);
+        }
       } else {
         setPlaceName("Location name not found");
+        if (onPlaceNameChange) {
+          onPlaceNameChange("");
+        }
       }
     } catch (err) {
       console.error(err);
       setPlaceName("Error fetching location name");
+      if (onPlaceNameChange) {
+        onPlaceNameChange("");
+      }
     }
   };
 
@@ -142,8 +152,6 @@ const LocationPicker = ({ location, setLocation }) => {
 
         {location.lat && location.lng && (
           <>
-
-            {/* ✅ DISPLAY PLACE NAME */}
             <Text fontSize="md" fontWeight="medium" color="teal.300">
               🗺️ {placeName}
             </Text>

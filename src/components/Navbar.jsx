@@ -31,8 +31,13 @@ const Links = [
   { label: 'My Reports', to: '/myreports' },
   { label: 'Waste List', to: '/wastelist' },
   { label: 'Admin', to: '/admin', icon: FaUserShield },
+
+  // ✅ NEW MAP LINK ADDED HERE
+  { label: 'Map', to: '/map' },
 ];
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
 const NavLink = ({ to, label, icon, isActive, onClick }) => (
   <Link
     as={RouterLink}
@@ -72,7 +77,6 @@ const Navbar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [redirectPath, setRedirectPath] = useState(null);
 
-  // Check authentication status on mount
   useEffect(() => {
     checkLoginStatus();
   }, []);
@@ -152,7 +156,6 @@ const Navbar = () => {
       zIndex={20}
     >
       <Flex h={16} alignItems={'center'} justifyContent={'space-between'}>
-        {/* Logo */}
         <Text
           fontSize="2xl"
           fontWeight="extrabold"
@@ -163,10 +166,9 @@ const Navbar = () => {
           transition="0.3s ease"
           animation="pulse 2s infinite"
         >
-          CleanMyCity
+          ZeroX Waste
         </Text>
 
-        {/* Desktop Nav */}
         <HStack spacing={6} display={{ base: 'none', md: 'flex' }}>
           {Links.map((link) => (
             <NavLink
@@ -180,7 +182,6 @@ const Navbar = () => {
           ))}
         </HStack>
 
-        {/* Desktop Report Button */}
         <HStack display={{ base: 'none', md: 'flex' }}>
           <Button
             as={RouterLink}
@@ -201,7 +202,6 @@ const Navbar = () => {
           </Button>
         </HStack>
 
-        {/* Mobile Menu Toggle */}
         <IconButton
           size={'md'}
           icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
@@ -213,7 +213,6 @@ const Navbar = () => {
         />
       </Flex>
 
-      {/* Mobile Nav */}
       <Collapse in={isOpen} animateOpacity>
         <Box pb={4} display={{ md: 'none' }}>
           <Stack as="nav" spacing={3}>
@@ -244,7 +243,6 @@ const Navbar = () => {
         </Box>
       </Collapse>
 
-      {/* Login Modal */}
       <Modal isOpen={isLoginOpen} onClose={onLoginClose} isCentered>
         <ModalOverlay />
         <ModalContent>
