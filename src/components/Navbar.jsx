@@ -1,49 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  Box,
-  Flex,
-  HStack,
-  Link,
-  IconButton,
-  Button,
-  useDisclosure,
-  Stack,
-  Text,
-  Icon,
-  Collapse,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  useToast,
+  Box, Flex, HStack, Link, IconButton, Button,
+  useDisclosure, Stack, Text, Icon, Collapse, useToast,
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
-import { FaPlusCircle, FaUserShield } from 'react-icons/fa';
+import { FaPlusCircle, FaUserShield, FaSignOutAlt, FaTrophy } from 'react-icons/fa';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
+import NotificationBell from './shared/NotificationBell';
 
-const Links = [
-  { label: 'Home', to: '/' },
-  { label: 'Report Waste', to: '/report', icon: FaPlusCircle },
-  { label: 'My Reports', to: '/myreports' },
-  { label: 'Waste List', to: '/wastelist' },
-  { label: 'Admin', to: '/admin', icon: FaUserShield },
-
-  // ✅ NEW MAP LINK ADDED HERE
-  { label: 'Map', to: '/map' },
+const userLinks = [
+  { label: 'Home',        to: '/' },
+  { label: 'Report Waste',to: '/report',      icon: FaPlusCircle },
+  { label: 'My Reports',  to: '/myreports' },
+  { label: 'Leaderboard', to: '/leaderboard', icon: FaTrophy },
 ];
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const adminLinks = [
+  { label: 'Waste List',  to: '/wastelist' },
+  { label: 'Map',         to: '/map' },
+  { label: 'Admin',       to: '/admin',       icon: FaUserShield },
+];
 
-const NavLink = ({ to, label, icon, isActive, onClick }) => (
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+const NavLink = ({ to, label, icon, isActive }) => (
   <Link
     as={RouterLink}
     to={to}
-    px={4}
-    py={2}
+    px={4} py={2}
     rounded="lg"
     fontWeight="medium"
     display="flex"
@@ -52,219 +36,152 @@ const NavLink = ({ to, label, icon, isActive, onClick }) => (
     transition="all 0.3s ease"
     bg={isActive ? 'green.100' : 'transparent'}
     color={isActive ? 'green.700' : 'gray.700'}
-    _hover={{
-      textDecoration: 'none',
-      bg: 'green.200',
-      color: 'green.800',
-      transform: 'scale(1.05)',
+    _hover={{ textDecoration: 'none', bg: 'green.200', color: 'green.800', transform: 'scale(1.05)' }}
+    _dark={{
+      color: isActive ? 'green.300' : 'gray.200',
+      bg: isActive ? 'green.900' : 'transparent',
+      _hover: { bg: 'green.800', color: 'green.200' },
     }}
-    onClick={onClick}
   >
     {icon && <Icon as={icon} boxSize={4} />} {label}
   </Link>
 );
 
-const Navbar = () => {
+const Navbar = ({ isAuthenticated, setIsAuthenticated, userRole, setUserRole }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const {
-    isOpen: isLoginOpen,
-    onOpen: onLoginOpen,
-    onClose: onLoginClose,
-  } = useDisclosure();
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useToast();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [redirectPath, setRedirectPath] = useState(null);
 
-  useEffect(() => {
-    checkLoginStatus();
-  }, []);
+  const navLinks = userRole === 'admin'
+    ? [...userLinks, ...adminLinks]
+    : userLinks;
 
-  const checkLoginStatus = async () => {
+  const handleLogout = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/check`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      const data = await res.json();
-      setIsAuthenticated(data.isAuthenticated);
-    } catch (error) {
-      console.error("Login status check failed", error);
-    }
-  };
-
-  const handleNavClick = (path) => {
-    if (isAuthenticated) {
-      navigate(path);
-    } else {
-      setRedirectPath(path);
-      onLoginOpen();
-    }
-  };
-
-  const handleGoogleLogin = async (credentialResponse) => {
-    const token = credentialResponse.credential;
-    const decoded = jwtDecode(token);
-    console.log("Google User: ", decoded);
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
+      await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ token }),
       });
-
-      const data = await res.json();
-      console.log("Backend response:", data);
-
-      if (res.ok) {
-        setIsAuthenticated(true);
-        onLoginClose();
-        toast({
-          title: "Login successful",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-        
-        if (redirectPath) {
-          navigate(redirectPath);
-        }
-      }
-    } catch (err) {
-      console.error("Error sending token to backend", err);
-      toast({
-        title: "Login failed",
-        description: "Please try again",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
+    } catch (_) {}
+    setIsAuthenticated(false);
+    setUserRole(null);
+    toast({ title: 'Logged out', status: 'info', duration: 2000 });
+    navigate('/login');
   };
 
   return (
     <Box
       bgGradient="linear(to-r, white, green.50)"
-      px={6}
-      py={2}
+      _dark={{ bgGradient: 'linear(to-r, gray.900, gray.800)' }}
+      px={6} py={2}
       shadow="md"
       position="sticky"
       top={0}
       zIndex={20}
     >
-      <Flex h={16} alignItems={'center'} justifyContent={'space-between'}>
+      <Flex h={16} alignItems="center" justifyContent="space-between">
+        {/* Logo */}
         <Text
-          fontSize="2xl"
-          fontWeight="extrabold"
-          color="green.600"
-          as={RouterLink}
-          to="/"
+          fontSize="2xl" fontWeight="extrabold" color="green.600"
+          as={RouterLink} to="/"
           _hover={{ textDecoration: 'none', color: 'green.700' }}
           transition="0.3s ease"
-          animation="pulse 2s infinite"
         >
           ZeroX Waste
         </Text>
 
-        <HStack spacing={6} display={{ base: 'none', md: 'flex' }}>
-          {Links.map((link) => (
+        {/* Desktop nav links */}
+        <HStack spacing={1} display={{ base: 'none', md: 'flex' }}>
+          {navLinks.map((link) => (
             <NavLink
               key={link.to}
-              to={isAuthenticated ? link.to : '#'}
+              to={link.to}
               label={link.label}
               icon={link.icon}
               isActive={location.pathname === link.to}
-              onClick={() => handleNavClick(link.to)}
             />
           ))}
         </HStack>
 
-        <HStack display={{ base: 'none', md: 'flex' }}>
+        {/* Desktop right side */}
+        <HStack spacing={3} display={{ base: 'none', md: 'flex' }}>
+          {/* Notification bell — only for authenticated users */}
+          {isAuthenticated && <NotificationBell />}
+
           <Button
-            as={RouterLink}
-            to={isAuthenticated ? '/report' : '#'}
+            as={RouterLink} to="/report"
             colorScheme="green"
             leftIcon={<FaPlusCircle />}
             fontWeight="bold"
             size="sm"
-            _hover={{
-              transform: 'scale(1.05)',
-              bg: 'green.500',
-              color: 'white',
-            }}
+            _hover={{ transform: 'scale(1.05)' }}
             transition="all 0.3s ease"
-            onClick={() => !isAuthenticated && handleNavClick('/report')}
           >
             Report Now
           </Button>
+          <Button
+            onClick={handleLogout}
+            colorScheme="red"
+            variant="ghost"
+            leftIcon={<FaSignOutAlt />}
+            size="sm"
+          >
+            Logout
+          </Button>
         </HStack>
 
-        <IconButton
-          size={'md'}
-          icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
-          aria-label={'Open Menu'}
-          display={{ md: 'none' }}
-          onClick={isOpen ? onClose : onOpen}
-          colorScheme="green"
-          variant="ghost"
-        />
+        {/* Mobile hamburger */}
+        <HStack display={{ md: 'none' }} spacing={2}>
+          {isAuthenticated && <NotificationBell />}
+          <IconButton
+            size="md"
+            icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
+            aria-label="Open Menu"
+            onClick={isOpen ? onClose : onOpen}
+            colorScheme="green"
+            variant="ghost"
+          />
+        </HStack>
       </Flex>
 
+      {/* Mobile menu */}
       <Collapse in={isOpen} animateOpacity>
         <Box pb={4} display={{ md: 'none' }}>
           <Stack as="nav" spacing={3}>
-            {Links.map((link) => (
+            {navLinks.map((link) => (
               <NavLink
                 key={link.to}
-                to={isAuthenticated ? link.to : '#'}
+                to={link.to}
                 label={link.label}
                 icon={link.icon}
                 isActive={location.pathname === link.to}
-                onClick={() => handleNavClick(link.to)}
               />
             ))}
             <Button
-              as={RouterLink}
-              to={isAuthenticated ? '/report' : '#'}
+              as={RouterLink} to="/report"
               leftIcon={<FaPlusCircle />}
               colorScheme="green"
-              fontWeight="bold"
               size="sm"
               w="full"
               mt={2}
-              onClick={() => !isAuthenticated && handleNavClick('/report')}
+              onClick={onClose}
             >
               Report Now
+            </Button>
+            <Button
+              onClick={handleLogout}
+              leftIcon={<FaSignOutAlt />}
+              colorScheme="red"
+              variant="ghost"
+              size="sm"
+              w="full"
+            >
+              Logout
             </Button>
           </Stack>
         </Box>
       </Collapse>
-
-      <Modal isOpen={isLoginOpen} onClose={onLoginClose} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Login with Google</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody textAlign="center" pb={6}>
-            <GoogleLogin
-              onSuccess={handleGoogleLogin}
-              onError={() => {
-                console.log("Login Failed");
-                toast({
-                  title: "Login failed",
-                  description: "Please try again",
-                  status: "error",
-                  duration: 3000,
-                  isClosable: true,
-                });
-              }}
-            />
-          </ModalBody>
-        </ModalContent>
-      </Modal>
     </Box>
   );
 };

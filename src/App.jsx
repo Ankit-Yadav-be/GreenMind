@@ -1,31 +1,117 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import MapPage from './pages/MapPage.jsx';
-
-import Home from './pages/Home';
-import ReportWaste from './pages/ReportWaste';
-import WasteList from './pages/WasteList';
-import AdminDashboard from './pages/AdminDashboard';
-import NotFound from './pages/NotFound';
-import MyReports from './pages/MyReports'
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
+
+import Login from './pages/Login';
+import Home from './pages/Home';
+import ReportWaste from './pages/ReportWaste';
+import MyReports from './pages/MyReports';
+import WasteList from './pages/WasteList';
+import AdminDashboard from './pages/AdminDashboard';
+import MapPage from './pages/MapPage';
+import Leaderboard from './pages/Leaderboard';
+import NotFound from './pages/NotFound';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/auth/check`, {
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (data.isAuthenticated) {
+          setIsAuthenticated(true);
+          setUserRole(data.user?.role || 'user');
+        }
+      } catch (_) {}
+      finally {
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  if (loading) return null;
+
   return (
     <Router>
-      <Navbar />
+      {isAuthenticated && (
+        <Navbar
+          isAuthenticated={isAuthenticated}
+          setIsAuthenticated={setIsAuthenticated}
+          userRole={userRole}
+          setUserRole={setUserRole}
+        />
+      )}
+
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/report" element={<ReportWaste />} />
-        <Route path="/myreports" element={<MyReports />} />
-        <Route path="/wastelist" element={<WasteList />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/map" element={<MapPage />} />
+        {/* Public */}
+        <Route
+          path="/login"
+          element={
+            <Login
+              setIsAuthenticated={setIsAuthenticated}
+              setUserRole={setUserRole}
+            />
+          }
+        />
+
+        {/* Any logged-in user */}
+        <Route path="/" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+            <Home />
+          </ProtectedRoute>
+        } />
+        <Route path="/report" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+            <ReportWaste />
+          </ProtectedRoute>
+        } />
+        <Route path="/myreports" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+            <MyReports />
+          </ProtectedRoute>
+        } />
+
+        {/* Leaderboard — accessible to all logged-in users */}
+        <Route path="/leaderboard" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+            <Leaderboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Admin only */}
+        <Route path="/admin" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} requiredRole="admin">
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/wastelist" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} requiredRole="admin">
+            <WasteList />
+          </ProtectedRoute>
+        } />
+        <Route path="/map" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} requiredRole="admin">
+            <MapPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Fallback */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Footer />
+
+      {isAuthenticated && <Footer />}
     </Router>
   );
 };

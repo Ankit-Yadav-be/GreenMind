@@ -11,7 +11,7 @@ import {
 import { FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/reports';
+const API_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/reports`;
 
 const SubmitButton = ({ selectedFile, location, formDetails, placeName }) => {
   const toast = useToast();
@@ -61,11 +61,12 @@ const SubmitButton = ({ selectedFile, location, formDetails, placeName }) => {
       });
 
       // Send POST request to backend
-      const response = await axios.post(API_URL, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+     const response = await axios.post(API_URL, formData, {
+  withCredentials: true,  // ← THIS is the actual fix
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
 
       setIsLoading(false);
 

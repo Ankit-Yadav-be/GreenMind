@@ -1,45 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box,
-  Container,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Badge,
-  Image,
-  Text,
-  VStack,
-  HStack,
-  useColorModeValue,
-  Spinner,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  Button,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
-  SimpleGrid,
-  Flex,
-  IconButton,
-  Tooltip,
-  Select,
+  Box, Container, Table, Thead, Tbody, Tr, Th, Td, Badge,
+  Image, Text, VStack, HStack, useColorModeValue, Spinner,
+  Alert, AlertIcon, AlertTitle, AlertDescription, Button,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody,
+  ModalCloseButton, useDisclosure, SimpleGrid, Flex,
+  IconButton, Tooltip, Select,
 } from '@chakra-ui/react';
 import { FiEye, FiTrash2, FiMapPin } from 'react-icons/fi';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/reports';
+// ✅ FIXED: correct URLs
+const MY_REPORTS_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/reports/my`;
+const BASE_REPORTS_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/reports`;
 
 const MyReports = () => {
   const [reports, setReports] = useState([]);
+  const [allReports, setAllReports] = useState([]); // store original for client-side filtering
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
@@ -52,27 +29,31 @@ const MyReports = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const headerBg = useColorModeValue('teal.500', 'teal.600');
 
-  // Fetch reports from backend
+  // ✅ Fetch once on mount with credentials
   useEffect(() => {
     fetchReports();
-  }, [filterCategory, filterStatus]);
+  }, []);
+
+  // ✅ Apply filters client-side whenever filter state changes
+  useEffect(() => {
+    let filtered = [...allReports];
+    if (filterCategory) filtered = filtered.filter(r => r.category === filterCategory);
+    if (filterStatus)   filtered = filtered.filter(r => r.status === filterStatus);
+    setReports(filtered);
+  }, [filterCategory, filterStatus, allReports]);
 
   const fetchReports = async () => {
     try {
       setLoading(true);
       setError('');
 
-      let url = API_URL;
-      const params = [];
-      if (filterCategory) params.push(`category=${filterCategory}`);
-      if (filterStatus) params.push(`status=${filterStatus}`);
-      if (params.length > 0) url += `?${params.join('&')}`;
+      // ✅ FIXED: use /my endpoint + withCredentials so cookie is sent
+      const response = await axios.get(MY_REPORTS_URL, { withCredentials: true });
 
-      const response = await axios.get(url);
+      setAllReports(response.data.data);
       setReports(response.data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch reports');
-      console.error('Error fetching reports:', err);
     } finally {
       setLoading(false);
     }
@@ -85,54 +66,26 @@ const MyReports = () => {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this report?')) return;
-
     try {
-      await axios.delete(`${API_URL}/${id}`);
-      setReports(reports.filter((report) => report._id !== id));
-      alert('Report deleted successfully!');
+      // ✅ FIXED: correct URL + withCredentials
+      await axios.delete(`${BASE_REPORTS_URL}/${id}`, { withCredentials: true });
+      const updated = allReports.filter(r => r._id !== id);
+      setAllReports(updated);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete report');
     }
   };
 
-  const getCategoryEmoji = (category) => {
-    const emojis = {
-      plastic: '🧴',
-      organic: '🍃',
-      electronic: '🔌',
-      other: '🧩',
-    };
-    return emojis[category] || '📦';
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'yellow',
-      'in-progress': 'blue',
-      resolved: 'green',
-      rejected: 'red',
-    };
-    return colors[status] || 'gray';
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const getCategoryEmoji = (category) => ({ plastic: '🧴', organic: '🍃', electronic: '🔌', other: '🧩' }[category] || '📦');
+  const getStatusColor  = (status)   => ({ pending: 'yellow', 'in-progress': 'blue', resolved: 'green', rejected: 'red' }[status] || 'gray');
+  const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   if (loading) {
     return (
       <Container maxW="container.xl" py={10}>
         <VStack spacing={4}>
           <Spinner size="xl" color="teal.500" thickness="4px" />
-          <Text fontSize="lg" color="gray.500">
-            Loading reports...
-          </Text>
+          <Text fontSize="lg" color="gray.500">Loading your reports...</Text>
         </VStack>
       </Container>
     );
@@ -156,14 +109,11 @@ const MyReports = () => {
     <Box bg={bg} minH="100vh" py={10}>
       <Container maxW="container.xl">
         <VStack spacing={6} align="stretch">
+
           {/* Header */}
           <Box>
-            <Text fontSize="4xl" fontWeight="bold" color="teal.400" mb={2}>
-              My Reports
-            </Text>
-            <Text fontSize="lg" color="gray.500">
-              View and manage all your waste reports
-            </Text>
+            <Text fontSize="4xl" fontWeight="bold" color="teal.400" mb={2}>My Reports</Text>
+            <Text fontSize="lg" color="gray.500">View and manage all your waste reports</Text>
           </Box>
 
           {/* Filters */}
@@ -172,9 +122,7 @@ const MyReports = () => {
               placeholder="All Categories"
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              bg={cardBg}
-              borderColor={borderColor}
-              maxW="200px"
+              bg={cardBg} borderColor={borderColor} maxW="200px"
             >
               <option value="plastic">🧴 Plastic</option>
               <option value="organic">🍃 Organic</option>
@@ -186,9 +134,7 @@ const MyReports = () => {
               placeholder="All Status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              bg={cardBg}
-              borderColor={borderColor}
-              maxW="200px"
+              bg={cardBg} borderColor={borderColor} maxW="200px"
             >
               <option value="pending">Pending</option>
               <option value="in-progress">In Progress</option>
@@ -196,38 +142,22 @@ const MyReports = () => {
               <option value="rejected">Rejected</option>
             </Select>
 
-            <Button
-              onClick={() => {
-                setFilterCategory('');
-                setFilterStatus('');
-              }}
-              colorScheme="gray"
-              variant="outline"
-            >
+            <Button onClick={() => { setFilterCategory(''); setFilterStatus(''); }} colorScheme="gray" variant="outline">
               Clear Filters
             </Button>
           </HStack>
 
-          {/* Reports Table */}
+          {/* Table or Empty State */}
           {reports.length === 0 ? (
             <Alert status="info" rounded="lg" boxShadow="lg">
               <AlertIcon />
               <Box>
                 <AlertTitle>No Reports Found</AlertTitle>
-                <AlertDescription>
-                  You haven't submitted any reports yet, or no reports match your filters.
-                </AlertDescription>
+                <AlertDescription>You haven't submitted any reports yet, or none match your filters.</AlertDescription>
               </Box>
             </Alert>
           ) : (
-            <Box
-              bg={cardBg}
-              rounded="xl"
-              boxShadow="xl"
-              overflow="hidden"
-              borderWidth="1px"
-              borderColor={borderColor}
-            >
+            <Box bg={cardBg} rounded="xl" boxShadow="xl" overflow="hidden" borderWidth="1px" borderColor={borderColor}>
               <Box overflowX="auto">
                 <Table variant="simple">
                   <Thead bg={headerBg}>
@@ -238,60 +168,36 @@ const MyReports = () => {
                       <Th color="white">Location</Th>
                       <Th color="white">Status</Th>
                       <Th color="white">Date</Th>
-                      <Th color="white" textAlign="center">
-                        Actions
-                      </Th>
+                      <Th color="white" textAlign="center">Actions</Th>
                     </Tr>
                   </Thead>
                   <Tbody>
                     {reports.map((report) => (
-                      <Tr
-                        key={report._id}
-                        _hover={{ bg: useColorModeValue('gray.50', 'gray.700') }}
-                        transition="all 0.2s"
-                      >
+                      <Tr key={report._id} _hover={{ bg: 'gray.50' }} transition="all 0.2s">
                         <Td>
-                          <Image
-                            src={report.images[0]?.url}
-                            alt="Report"
-                            boxSize="60px"
-                            objectFit="cover"
-                            rounded="md"
-                            fallbackSrc="https://via.placeholder.com/60"
-                          />
+                          <Image src={report.images[0]?.url} alt="Report" boxSize="60px" objectFit="cover" rounded="md" fallbackSrc="https://via.placeholder.com/60" />
                         </Td>
                         <Td maxW="200px">
-                          <Text noOfLines={2} fontSize="sm">
-                            {report.description}
-                          </Text>
+                          <Text noOfLines={2} fontSize="sm">{report.description}</Text>
                         </Td>
                         <Td>
                           <HStack>
                             <Text fontSize="xl">{getCategoryEmoji(report.category)}</Text>
-                            <Text textTransform="capitalize" fontSize="sm">
-                              {report.category}
-                            </Text>
+                            <Text textTransform="capitalize" fontSize="sm">{report.category}</Text>
                           </HStack>
                         </Td>
                         <Td>
-                          <Tooltip label={report.location.address || 'No address'}>
+                          <Tooltip label={report.location?.address || 'No address'}>
                             <HStack spacing={1} cursor="pointer">
                               <FiMapPin />
                               <Text fontSize="sm" noOfLines={1} maxW="150px">
-                                {report.location.address || 'View on map'}
+                                {report.location?.address || 'View on map'}
                               </Text>
                             </HStack>
                           </Tooltip>
                         </Td>
                         <Td>
-                          <Badge
-                            colorScheme={getStatusColor(report.status)}
-                            fontSize="xs"
-                            px={3}
-                            py={1}
-                            rounded="full"
-                            textTransform="capitalize"
-                          >
+                          <Badge colorScheme={getStatusColor(report.status)} fontSize="xs" px={3} py={1} rounded="full" textTransform="capitalize">
                             {report.status}
                           </Badge>
                         </Td>
@@ -299,24 +205,10 @@ const MyReports = () => {
                         <Td>
                           <HStack spacing={2} justify="center">
                             <Tooltip label="View Details">
-                              <IconButton
-                                icon={<FiEye />}
-                                size="sm"
-                                colorScheme="blue"
-                                variant="ghost"
-                                onClick={() => handleViewDetails(report)}
-                                aria-label="View details"
-                              />
+                              <IconButton icon={<FiEye />} size="sm" colorScheme="blue" variant="ghost" onClick={() => handleViewDetails(report)} aria-label="View details" />
                             </Tooltip>
                             <Tooltip label="Delete Report">
-                              <IconButton
-                                icon={<FiTrash2 />}
-                                size="sm"
-                                colorScheme="red"
-                                variant="ghost"
-                                onClick={() => handleDelete(report._id)}
-                                aria-label="Delete report"
-                              />
+                              <IconButton icon={<FiTrash2 />} size="sm" colorScheme="red" variant="ghost" onClick={() => handleDelete(report._id)} aria-label="Delete report" />
                             </Tooltip>
                           </HStack>
                         </Td>
@@ -329,7 +221,7 @@ const MyReports = () => {
           )}
         </VStack>
 
-        {/* Details Modal */}
+        {/* Detail Modal */}
         {selectedReport && (
           <Modal isOpen={isOpen} onClose={onClose} size="xl">
             <ModalOverlay />
@@ -343,96 +235,50 @@ const MyReports = () => {
               <ModalCloseButton />
               <ModalBody pb={6}>
                 <VStack spacing={4} align="stretch">
-                  {/* Images */}
+                  <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
+                    {selectedReport.images.map((image, i) => (
+                      <Image key={i} src={image.url} alt={`Report ${i + 1}`} rounded="md" objectFit="cover" h="150px" w="100%"
+                        cursor="pointer" onClick={() => window.open(image.url, '_blank')}
+                        _hover={{ transform: 'scale(1.05)' }} transition="all 0.2s"
+                      />
+                    ))}
+                  </SimpleGrid>
+
                   <Box>
-                    <Text fontWeight="bold" mb={2}>
-                      Images
-                    </Text>
-                    <SimpleGrid columns={{ base: 2, md: 3 }} spacing={3}>
-                      {selectedReport.images.map((image, index) => (
-                        <Image
-                          key={index}
-                          src={image.url}
-                          alt={`Report ${index + 1}`}
-                          rounded="md"
-                          objectFit="cover"
-                          h="150px"
-                          w="100%"
-                          cursor="pointer"
-                          onClick={() => window.open(image.url, '_blank')}
-                          _hover={{ transform: 'scale(1.05)' }}
-                          transition="all 0.2s"
-                        />
-                      ))}
-                    </SimpleGrid>
+                    <Text fontWeight="bold" mb={2}>Description</Text>
+                    <Text fontSize="sm" color="gray.600" p={3} bg={bg} rounded="md">{selectedReport.description}</Text>
                   </Box>
 
-                  {/* Description */}
-                  <Box>
-                    <Text fontWeight="bold" mb={2}>
-                      Description
-                    </Text>
-                    <Text fontSize="sm" color="gray.600" p={3} bg={bg} rounded="md">
-                      {selectedReport.description}
-                    </Text>
-                  </Box>
-
-                  {/* Details Grid */}
                   <SimpleGrid columns={2} spacing={4}>
                     <Box>
-                      <Text fontWeight="bold" fontSize="sm" color="gray.500">
-                        Category
-                      </Text>
+                      <Text fontWeight="bold" fontSize="sm" color="gray.500">Category</Text>
                       <HStack mt={1}>
                         <Text fontSize="lg">{getCategoryEmoji(selectedReport.category)}</Text>
                         <Text textTransform="capitalize">{selectedReport.category}</Text>
                       </HStack>
                     </Box>
-
                     <Box>
-                      <Text fontWeight="bold" fontSize="sm" color="gray.500">
-                        Status
-                      </Text>
-                      <Badge
-                        colorScheme={getStatusColor(selectedReport.status)}
-                        fontSize="sm"
-                        px={3}
-                        py={1}
-                        rounded="full"
-                        textTransform="capitalize"
-                        mt={1}
-                      >
+                      <Text fontWeight="bold" fontSize="sm" color="gray.500">Status</Text>
+                      <Badge colorScheme={getStatusColor(selectedReport.status)} fontSize="sm" px={3} py={1} rounded="full" textTransform="capitalize" mt={1}>
                         {selectedReport.status}
                       </Badge>
                     </Box>
-
                     <Box>
-                      <Text fontWeight="bold" fontSize="sm" color="gray.500">
-                        Coordinates
-                      </Text>
+                      <Text fontWeight="bold" fontSize="sm" color="gray.500">Coordinates</Text>
                       <Text fontSize="sm" mt={1}>
-                        Lat: {selectedReport.location.coordinates[1].toFixed(4)}
-                        <br />
-                        Lng: {selectedReport.location.coordinates[0].toFixed(4)}
+                        Lat: {selectedReport.location.coordinates[1]?.toFixed(4)}<br />
+                        Lng: {selectedReport.location.coordinates[0]?.toFixed(4)}
                       </Text>
                     </Box>
-
                     <Box>
-                      <Text fontWeight="bold" fontSize="sm" color="gray.500">
-                        Reported On
-                      </Text>
-                      <Text fontSize="sm" mt={1}>
-                        {formatDate(selectedReport.createdAt)}
-                      </Text>
+                      <Text fontWeight="bold" fontSize="sm" color="gray.500">Reported On</Text>
+                      <Text fontSize="sm" mt={1}>{formatDate(selectedReport.createdAt)}</Text>
                     </Box>
                   </SimpleGrid>
 
-                  {/* Location Address */}
-                  {selectedReport.location.address && (
+                  {selectedReport.location?.address && (
                     <Box>
-                      <Text fontWeight="bold" mb={2}>
-                        Location Address
-                      </Text>
+                      <Text fontWeight="bold" mb={2}>Location Address</Text>
                       <Flex align="center" gap={2} p={3} bg={bg} rounded="md">
                         <FiMapPin />
                         <Text fontSize="sm">{selectedReport.location.address}</Text>
