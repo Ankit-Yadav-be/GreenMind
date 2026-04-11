@@ -109,17 +109,7 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated, userRole, setUserRole }) 
           {/* Notification bell — only for authenticated users */}
           {isAuthenticated && <NotificationBell />}
 
-          <Button
-            as={RouterLink} to="/report"
-            colorScheme="green"
-            leftIcon={<FaPlusCircle />}
-            fontWeight="bold"
-            size="sm"
-            _hover={{ transform: 'scale(1.05)' }}
-            transition="all 0.3s ease"
-          >
-            Report Now
-          </Button>
+         
           <Button
             onClick={handleLogout}
             colorScheme="red"
@@ -158,17 +148,7 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated, userRole, setUserRole }) 
                 isActive={location.pathname === link.to}
               />
             ))}
-            <Button
-              as={RouterLink} to="/report"
-              leftIcon={<FaPlusCircle />}
-              colorScheme="green"
-              size="sm"
-              w="full"
-              mt={2}
-              onClick={onClose}
-            >
-              Report Now
-            </Button>
+           
             <Button
               onClick={handleLogout}
               leftIcon={<FaSignOutAlt />}

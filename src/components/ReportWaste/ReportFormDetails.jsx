@@ -116,18 +116,54 @@ const ReportFormDetails = ({ formDetails, setFormDetails }) => {
             boxShadow: focusShadow,
           }}
         >
-          <option style={{ backgroundColor: '#2D3748' }} value="plastic">
-            🧴 Plastic Waste
-          </option>
-          <option style={{ backgroundColor: '#2D3748' }} value="organic">
-            🍃 Organic Waste
-          </option>
-          <option style={{ backgroundColor: '#2D3748' }} value="electronic">
-            🔌 Electronic Waste
-          </option>
-          <option style={{ backgroundColor: '#2D3748' }} value="other">
-            🧩 Other
-          </option>
+         <option style={{ backgroundColor: '#2D3748' }} value="plastic">
+  🧴 Plastic Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="organic">
+  🍃 Organic / Food Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="electronic">
+  🔌 Electronic Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="paper">
+  🗞️ Paper & Cardboard
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="metal">
+  🥫 Metal Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="glass">
+  🍾 Glass Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="batteries">
+  🔋 Batteries
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="lightbulbs">
+  💡 Light Bulbs
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="chemical">
+  🧪 Chemical Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="medical">
+  💊 Medical / Pharmaceutical Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="textiles">
+  👕 Textiles & Clothing
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="furniture">
+  🛋️ Furniture / Bulky Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="garden">
+  🌿 Garden Waste
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="oil">
+  🛢️ Cooking / Motor Oil
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="construction">
+  🧱 Construction Debris
+</option>
+<option style={{ backgroundColor: '#2D3748' }} value="other">
+  🧩 Other
+</option>
         </Select>
       </FormControl>
     </MotionBox>

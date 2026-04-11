@@ -125,7 +125,7 @@ const HeroSection = () => {
             size="lg"
             fontWeight="medium"
             px={8}
-            onClick={() => openLogin('/wastelist')}
+            onClick={() => openLogin('/myreports')}
           >
             View Reports
           </Button>
