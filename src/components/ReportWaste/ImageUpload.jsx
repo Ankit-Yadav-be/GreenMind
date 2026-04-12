@@ -1,23 +1,23 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Box,
-  Button,
-  Input,
-  Text,
-  Image,
-  Icon,
-  useColorModeValue,
-  SimpleGrid,
-  Flex,
-  IconButton,
+  Box, Button, Input, Text, Image, Icon,
+  useColorModeValue, SimpleGrid, IconButton, VStack, Badge,
 } from '@chakra-ui/react';
-import { FiUploadCloud, FiTrash2 } from 'react-icons/fi';
+import { FiUploadCloud, FiTrash2, FiImage } from 'react-icons/fi';
 
 const ImageUpload = ({ selectedFile, setSelectedFile }) => {
   const inputRef = useRef();
+  const [dragging, setDragging] = useState(false);
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
+    setSelectedFile((prev) => [...prev, ...files]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
     setSelectedFile((prev) => [...prev, ...files]);
   };
 
@@ -27,79 +27,77 @@ const ImageUpload = ({ selectedFile, setSelectedFile }) => {
     setSelectedFile(updated);
   };
 
-  const borderColor = useColorModeValue('gray.300', 'gray.600');
-  const buttonBg = useColorModeValue('teal.400', 'teal.600');
-  const buttonHover = useColorModeValue('teal.500', 'teal.700');
-  const previewBg = useColorModeValue('gray.50', 'gray.700');
+  const borderColor  = dragging ? 'green.400' : useColorModeValue('gray.200', 'gray.600');
+  const dropBg       = dragging ? useColorModeValue('green.50', 'green.900') : useColorModeValue('gray.50', 'gray.750');
+  const iconColor    = useColorModeValue('gray.400', 'gray.500');
 
   return (
-    <Box
-      mb={6}
-      textAlign="center"
-      border="2px dashed"
-      borderColor={borderColor}
-      p={6}
-      borderRadius="xl"
-      boxShadow="xl"
-      transition="all 0.3s"
-      _hover={{ borderColor: 'teal.400', transform: 'scale(1.01)' }}
-    >
-      <Input
-        type="file"
-        accept="image/*"
-        multiple
-        ref={inputRef}
-        display="none"
-        onChange={handleImageSelect}
-      />
+    <Box>
+      <Input type="file" accept="image/*" multiple ref={inputRef} display="none" onChange={handleImageSelect} />
 
-      <Button
-        leftIcon={<Icon as={FiUploadCloud} boxSize={5} />}
-        bgGradient="linear(to-r, teal.400, blue.500)"
-        color="white"
-        _hover={{
-          bgGradient: 'linear(to-r, teal.500, blue.600)',
-          transform: 'scale(1.03)',
-        }}
-        size="lg"
-        borderRadius="lg"
-        onClick={() => inputRef.current.click()}
-        mb={4}
+      {/* Drop Zone */}
+      <Box
+        border="2px dashed" borderColor={borderColor} borderRadius="xl"
+        p={8} textAlign="center" bg={dropBg} cursor="pointer"
         transition="all 0.2s"
+        onClick={() => inputRef.current.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        _hover={{ borderColor: 'green.400', bg: useColorModeValue('green.50', 'green.900') }}
       >
-        Upload Images
-      </Button>
+        <VStack spacing={3}>
+          <Box
+            bg={useColorModeValue('green.100', 'green.800')}
+            p={4} borderRadius="2xl"
+          >
+            <Icon as={FiUploadCloud} boxSize={8} color="green.500" />
+          </Box>
+          <Box>
+            <Text fontWeight="bold" fontSize="sm">
+              {dragging ? 'Drop images here' : 'Click or drag images here'}
+            </Text>
+            <Text fontSize="xs" color="gray.400" mt={1}>
+              PNG, JPG, WEBP up to 5MB each · Multiple allowed
+            </Text>
+          </Box>
+          <Button
+            size="sm" colorScheme="green" variant="outline" borderRadius="lg"
+            onClick={(e) => { e.stopPropagation(); inputRef.current.click(); }}
+          >
+            Browse Files
+          </Button>
+        </VStack>
+      </Box>
 
+      {/* Preview Grid */}
       {selectedFile.length > 0 && (
-        <Box mt={6}>
-          <Text fontWeight="bold" mb={4}>
-            Preview
+        <Box mt={4}>
+          <Text fontSize="xs" color="gray.500" mb={2} fontWeight="medium">
+            {selectedFile.length} image{selectedFile.length > 1 ? 's' : ''} selected
           </Text>
-          <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={5}>
+          <SimpleGrid columns={{ base: 2, sm: 3 }} spacing={3}>
             {selectedFile.map((file, index) => (
-              <Box
-                key={index}
-                position="relative"
-                borderRadius="md"
-                boxShadow="md"
-                overflow="hidden"
-              >
+              <Box key={index} position="relative" borderRadius="xl" overflow="hidden" boxShadow="md" group>
                 <Image
                   src={URL.createObjectURL(file)}
                   alt={`Preview ${index}`}
-                  objectFit="cover"
-                  w="100%"
-                  h="200px"
-                  borderRadius="md"
+                  objectFit="cover" w="100%" h="120px"
                 />
+                {index === 0 && (
+                  <Badge
+                    position="absolute" top={1} left={1}
+                    colorScheme="green" fontSize="9px"
+                  >
+                    Primary
+                  </Badge>
+                )}
                 <IconButton
                   icon={<FiTrash2 />}
-                  aria-label="Remove Image"
-                  colorScheme="red"
-                  size="sm"
-                  position="absolute"
-                  top={2}
-                  right={2}
+                  aria-label="Remove"
+                  colorScheme="red" size="xs"
+                  position="absolute" top={1} right={1}
+                  borderRadius="lg" opacity={0.9}
                   onClick={() => handleRemove(index)}
                 />
               </Box>

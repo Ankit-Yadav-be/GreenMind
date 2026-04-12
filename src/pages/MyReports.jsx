@@ -6,178 +6,187 @@ import {
   Modal, ModalOverlay, ModalContent, ModalHeader,
   ModalBody, ModalCloseButton, useDisclosure, Tabs,
   TabList, Tab, TabPanels, TabPanel, Progress, Divider,
+  useToast,
 } from '@chakra-ui/react';
-import { FaMapMarkerAlt, FaClock, FaImage } from 'react-icons/fa';
-import { FiRefreshCw, FiEye } from 'react-icons/fi';
+import { FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+import { FiRefreshCw, FiEye, FiZap } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 const MotionBox = motion(Box);
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
-const STATUS_CONFIG = {
-  pending:       { color: 'yellow', label: 'Pending' },
-  'in-progress': { color: 'blue',   label: 'In Progress' },
-  resolved:      { color: 'green',  label: 'Resolved' },
-  rejected:      { color: 'red',    label: 'Rejected' },
-};
-
+const STATUS_CONFIG  = { pending: { color: 'yellow', label: 'Pending' }, 'in-progress': { color: 'blue', label: 'In Progress' }, resolved: { color: 'green', label: 'Resolved' }, rejected: { color: 'red', label: 'Rejected' } };
 const PRIORITY_COLOR = { High: 'red', Medium: 'yellow', Low: 'green' };
-
-const PriorityBadge = ({ priorityLevel, priorityScore }) => {
-  const emoji = { High: '🔴', Medium: '🟡', Low: '🟢' }[priorityLevel] || '⚪';
-  if (!priorityLevel) return <Badge colorScheme="gray" fontSize="xs">Analyzing…</Badge>;
-  return (
-    <Tooltip label={`Score: ${priorityScore ?? 'N/A'}/100`} hasArrow>
-      <Badge colorScheme={PRIORITY_COLOR[priorityLevel]} fontSize="xs" px={2} py={1} rounded="full">
-        {emoji} {priorityLevel} ({priorityScore ?? '?'})
-      </Badge>
-    </Tooltip>
-  );
-};
+const PRIORITY_EMOJI = { High: '🔴', Medium: '🟡', Low: '🟢' };
 
 const MyReports = () => {
-  const [reports, setReports]           = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState('');
-  const [selectedReport, setSelected]   = useState(null);
-  const { isOpen, onOpen, onClose }     = useDisclosure();
+  const [reports, setReports]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState('');
+  const [selectedReport, setSelected] = useState(null);
+  const [recalcing, setRecalcing]     = useState(null);
+  const { isOpen, onOpen, onClose }   = useDisclosure();
+  const toast = useToast();
 
-  const cardBg   = useColorModeValue('white', 'gray.800');
-  const subtleBg = useColorModeValue('gray.50', 'gray.700');
-  const pageBg   = useColorModeValue('gray.50', 'gray.900');
+  const pageBg    = useColorModeValue('gray.50', 'gray.900');
+  const cardBg    = useColorModeValue('white', 'gray.800');
+  const borderCol = useColorModeValue('gray.100', 'gray.700');
+  const subtleBg  = useColorModeValue('gray.50', 'gray.700');
 
   const fetchMyReports = async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const res = await fetch(`${BACKEND_URL}/api/reports/my`, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to fetch');
       setReports(data.data || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchMyReports(); }, []);
 
   const handleView = (report) => { setSelected(report); onOpen(); };
 
-  const formatDate = (d) =>
-    new Date(d).toLocaleDateString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
+  // Manually trigger AI analysis for old reports showing N/A
+  const handleRecalculate = async (reportId, e) => {
+    e.stopPropagation();
+    setRecalcing(reportId);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/reports/${reportId}/recalculate`, { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setReports(prev => prev.map(r => r._id === reportId ? data.data : r));
+        if (selectedReport?._id === reportId) setSelected(data.data);
+        toast({ title: 'Analysis complete!', description: `Priority: ${data.data.priorityLevel} (${data.data.priorityScore})`, status: 'success', duration: 4000, position: 'top-right' });
+      }
+    } catch {
+      toast({ title: 'Recalculation failed', status: 'error', duration: 3000, position: 'top-right' });
+    } finally { setRecalcing(null); }
+  };
 
-  if (loading) {
-    return (
-      <Container maxW="container.xl" py={20} textAlign="center">
-        <Spinner size="xl" color="green.500" thickness="4px" />
-        <Text mt={4} color="gray.500">Loading your reports…</Text>
-      </Container>
-    );
-  }
+  const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // Summary counts
+  const summary = { total: reports.length, high: reports.filter(r => r.priorityLevel === 'High').length, pending: reports.filter(r => r.status === 'pending').length, resolved: reports.filter(r => r.status === 'resolved').length };
+
+  if (loading) return <Box minH="100vh" bg={pageBg} display="flex" alignItems="center" justifyContent="center"><VStack><Spinner size="xl" color="green.500" /><Text color="gray.400">Loading your reports…</Text></VStack></Box>;
 
   return (
-    <Box minH="100vh" bg={pageBg} py={10}>
-      <Container maxW="container.xl">
-        <Flex justify="space-between" align="center" mb={8}>
-          <Box>
-            <Heading color="green.600" fontSize={{ base: '2xl', md: '3xl' }}>My Reports</Heading>
-            <Text color="gray.500" mt={1}>Click any report to see AI analysis, classification and recommendations</Text>
-          </Box>
-          <Button leftIcon={<FiRefreshCw />} onClick={fetchMyReports} colorScheme="green" variant="outline" size="sm">
-            Refresh
-          </Button>
-        </Flex>
+    <Box minH="100vh" bg={pageBg}>
+      {/* Banner */}
+      <Box bgGradient="linear(135deg, green.600, teal.500)" py={10} px={6}>
+        <Container maxW="container.xl">
+          <Flex justify="space-between" align="start" flexWrap="wrap" gap={4}>
+            <Box>
+              <Text fontSize="2xl" fontWeight="extrabold" color="white">My Reports</Text>
+              <Text color="whiteAlpha.800" fontSize="sm" mt={1}>
+                Click any report to see AI classification, priority breakdown and recommendations
+              </Text>
+            </Box>
+            <Button leftIcon={<FiRefreshCw />} onClick={fetchMyReports} size="sm" bg="whiteAlpha.200" color="white" _hover={{ bg: 'whiteAlpha.300' }} borderRadius="xl">
+              Refresh
+            </Button>
+          </Flex>
 
-        {error && <Alert status="error" mb={6} rounded="lg"><AlertIcon />{error}</Alert>}
+          {/* Mini stats */}
+          <HStack mt={5} spacing={4} flexWrap="wrap">
+            {[
+              { label: 'Total',    value: summary.total,    color: 'whiteAlpha.300' },
+              { label: '🔴 High',  value: summary.high,     color: 'red.400'        },
+              { label: '⏳ Pending',value: summary.pending,  color: 'yellow.400'     },
+              { label: '✅ Resolved',value: summary.resolved, color: 'green.300'     },
+            ].map(({ label, value }) => (
+              <Box key={label} bg="whiteAlpha.200" px={4} py={2} borderRadius="xl">
+                <Text fontSize="xs" color="whiteAlpha.700">{label}</Text>
+                <Text fontSize="xl" fontWeight="extrabold" color="white">{value}</Text>
+              </Box>
+            ))}
+          </HStack>
+        </Container>
+      </Box>
+
+      <Container maxW="container.xl" py={8}>
+        {error && <Alert status="error" mb={6} rounded="xl"><AlertIcon />{error}</Alert>}
 
         {reports.length === 0 && !error ? (
           <Box textAlign="center" py={20}>
-            <Icon as={FaImage} boxSize={16} color="gray.300" mb={4} />
-            <Text fontSize="xl" color="gray.500">No reports yet.</Text>
-            <Text color="gray.400" mt={2}>Submit your first waste report to earn 10 points!</Text>
+            <Text fontSize="4xl" mb={4}>🌿</Text>
+            <Text fontSize="xl" fontWeight="bold" color="gray.500">No reports yet</Text>
+            <Text color="gray.400" mt={2}>Submit your first report to earn 10 points!</Text>
           </Box>
         ) : (
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={5}>
             {reports.map((report, i) => (
               <MotionBox
                 key={report._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.07 }}
+                transition={{ duration: 0.3, delay: Math.min(i * 0.06, 0.4) }}
               >
                 <Box
                   bg={cardBg} borderRadius="2xl" overflow="hidden"
                   boxShadow="md" cursor="pointer"
+                  borderWidth="1px" borderColor={borderCol}
+                  borderTopWidth="3px"
+                  borderTopColor={report.priorityLevel ? `${PRIORITY_COLOR[report.priorityLevel]}.400` : 'gray.200'}
                   _hover={{ boxShadow: 'xl', transform: 'translateY(-4px)' }}
-                  transition="all 0.3s ease"
+                  transition="all 0.25s ease"
                   onClick={() => handleView(report)}
                 >
                   <Box position="relative">
                     <Image
                       src={report.images[0]?.url}
-                      alt="Report"
-                      w="100%" h="180px" objectFit="cover"
-                      fallbackSrc="https://via.placeholder.com/400x180?text=No+Image"
+                      alt="Report" w="100%" h="170px" objectFit="cover"
+                      fallbackSrc="https://via.placeholder.com/400x170?text=No+Image"
                     />
-                    {/* AI Classification badge on image */}
                     {report.wasteClassification?.wasteType && (
-                      <Badge
-                        position="absolute" top={2} left={2}
-                        colorScheme="purple" fontSize="xs" px={2} py={1}
-                      >
-                        {report.wasteClassification.wasteType}
-                      </Badge>
+                      <Badge position="absolute" top={2} left={2} colorScheme="purple" fontSize="9px">{report.wasteClassification.wasteType}</Badge>
                     )}
-                    {/* Hazard badge */}
-                    {report.wasteClassification?.hazardLevel === 'High' || report.wasteClassification?.hazardLevel === 'Critical' ? (
-                      <Badge
-                        position="absolute" top={2} right={2}
-                        colorScheme="red" fontSize="xs" px={2} py={1}
-                      >
-                        ⚠️ {report.wasteClassification.hazardLevel}
-                      </Badge>
-                    ) : null}
+                    {(report.wasteClassification?.hazardLevel === 'High' || report.wasteClassification?.hazardLevel === 'Critical') && (
+                      <Badge position="absolute" top={2} right={2} colorScheme="red" fontSize="9px">⚠️ {report.wasteClassification.hazardLevel}</Badge>
+                    )}
                   </Box>
 
-                  <Box p={5}>
-                    <HStack justify="space-between" mb={3} flexWrap="wrap" gap={2}>
-                      <Badge
-                        colorScheme={STATUS_CONFIG[report.status]?.color || 'gray'}
-                        fontSize="xs" px={2} py={1} rounded="full" textTransform="capitalize"
-                      >
+                  <Box p={4}>
+                    <HStack justify="space-between" mb={3} flexWrap="wrap" gap={1}>
+                      <Badge colorScheme={STATUS_CONFIG[report.status]?.color || 'gray'} fontSize="10px" px={2} py={0.5} borderRadius="full" textTransform="capitalize">
                         {STATUS_CONFIG[report.status]?.label || report.status}
                       </Badge>
-                      <PriorityBadge priorityLevel={report.priorityLevel} priorityScore={report.priorityScore} />
+                      {report.priorityLevel ? (
+                        <Badge colorScheme={PRIORITY_COLOR[report.priorityLevel]} fontSize="10px" px={2} py={0.5} borderRadius="full">
+                          {PRIORITY_EMOJI[report.priorityLevel]} {report.priorityLevel} · {report.priorityScore}
+                        </Badge>
+                      ) : (
+                        <Tooltip label="Click to trigger AI analysis for this report">
+                          <Button
+                            size="xs" leftIcon={<FiZap />} colorScheme="orange" variant="outline"
+                            borderRadius="full" fontSize="10px"
+                            isLoading={recalcing === report._id}
+                            loadingText="Analyzing…"
+                            onClick={(e) => handleRecalculate(report._id, e)}
+                          >
+                            Analyze Now
+                          </Button>
+                        </Tooltip>
+                      )}
                     </HStack>
 
-                    <Text fontSize="sm" color="gray.600" noOfLines={2} mb={3}>
+                    <Text fontSize="sm" color={useColorModeValue('gray.700', 'gray.200')} noOfLines={2} mb={3} lineHeight="1.5">
                       {report.description}
                     </Text>
-
                     <Divider mb={3} />
-
-                    <Stack spacing={1}>
-                      <HStack fontSize="xs" color="gray.500">
-                        <Icon as={FaMapMarkerAlt} />
-                        <Text noOfLines={1}>
-                          {report.location?.address || `${report.location?.coordinates[1]?.toFixed(4)}, ${report.location?.coordinates[0]?.toFixed(4)}`}
-                        </Text>
+                    <Stack spacing={1.5}>
+                      <HStack fontSize="xs" color="gray.400" spacing={1.5}>
+                        <Icon as={FaMapMarkerAlt} flexShrink={0} />
+                        <Text noOfLines={1}>{report.location?.address || `${report.location?.coordinates[1]?.toFixed(4)}, ${report.location?.coordinates[0]?.toFixed(4)}`}</Text>
                       </HStack>
-                      <HStack fontSize="xs" color="gray.500">
-                        <Icon as={FaClock} />
+                      <HStack fontSize="xs" color="gray.400" spacing={1.5}>
+                        <Icon as={FaClock} flexShrink={0} />
                         <Text>{formatDate(report.createdAt)}</Text>
                       </HStack>
                     </Stack>
-
-                    <Button
-                      size="xs" leftIcon={<FiEye />} colorScheme="green"
-                      variant="ghost" mt={3} w="full"
-                    >
+                    <Button size="xs" leftIcon={<FiEye />} colorScheme="green" variant="ghost" mt={3} w="full" borderRadius="lg">
                       View Full Analysis
                     </Button>
                   </Box>
@@ -188,265 +197,175 @@ const MyReports = () => {
         )}
       </Container>
 
-      {/* ── Full Analysis Modal ── */}
+      {/* Analysis Modal */}
       {selectedReport && (
         <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
-          <ModalOverlay />
-          <ModalContent bg={cardBg}>
+          <ModalOverlay backdropFilter="blur(4px)" />
+          <ModalContent bg={cardBg} borderRadius="2xl">
             <ModalHeader>
               <HStack>
                 <Text>Report Analysis</Text>
-                <PriorityBadge priorityLevel={selectedReport.priorityLevel} priorityScore={selectedReport.priorityScore} />
+                {selectedReport.priorityLevel ? (
+                  <Badge colorScheme={PRIORITY_COLOR[selectedReport.priorityLevel]} borderRadius="full" px={2}>
+                    {PRIORITY_EMOJI[selectedReport.priorityLevel]} {selectedReport.priorityLevel} · {selectedReport.priorityScore}
+                  </Badge>
+                ) : (
+                  <Button size="xs" leftIcon={<FiZap />} colorScheme="orange" isLoading={recalcing === selectedReport._id} onClick={(e) => handleRecalculate(selectedReport._id, e)}>
+                    Analyze Now
+                  </Button>
+                )}
               </HStack>
             </ModalHeader>
             <ModalCloseButton />
             <ModalBody pb={6}>
-              <Tabs colorScheme="green" variant="enclosed">
-                <TabList flexWrap="wrap">
-                  <Tab fontSize="sm">Details</Tab>
-                  <Tab fontSize="sm">Priority Score</Tab>
-                  {selectedReport.wasteClassification?.wasteType && <Tab fontSize="sm">AI Classification</Tab>}
-                  {selectedReport.recommendations?.immediateActions?.length > 0 && <Tab fontSize="sm">Recommendations</Tab>}
+              <Tabs colorScheme="green" variant="soft-rounded" size="sm">
+                <TabList flexWrap="wrap" gap={1} mb={4}>
+                  <Tab>Details</Tab>
+                  <Tab>Priority Score</Tab>
+                  {selectedReport.wasteClassification?.wasteType && <Tab>AI Classification</Tab>}
+                  {selectedReport.recommendations?.immediateActions?.length > 0 && <Tab>Recommendations</Tab>}
                 </TabList>
-
                 <TabPanels>
-                  {/* ── Tab 1: Basic Details ── */}
                   <TabPanel px={0}>
                     <VStack spacing={4} align="stretch">
-                      <Image
-                        src={selectedReport.images[0]?.url}
-                        alt="Report" w="100%" h="220px" objectFit="cover"
-                        borderRadius="lg"
-                        fallbackSrc="https://via.placeholder.com/600x220?text=No+Image"
-                      />
-                      <Box p={4} bg={subtleBg} rounded="lg">
-                        <Text fontSize="xs" color="gray.500" mb={1}>Description</Text>
-                        <Text fontSize="sm">{selectedReport.description}</Text>
-                      </Box>
+                      <Image src={selectedReport.images[0]?.url} h="220px" objectFit="cover" borderRadius="xl" fallbackSrc="https://via.placeholder.com/600x220?text=No+Image" />
+                      <Box p={4} bg={subtleBg} borderRadius="xl"><Text fontSize="xs" color="gray.500" mb={1}>Description</Text><Text fontSize="sm">{selectedReport.description}</Text></Box>
                       <SimpleGrid columns={2} spacing={3}>
-                        <Box p={3} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Category</Text>
-                          <Text fontSize="sm" fontWeight="bold" textTransform="capitalize">{selectedReport.category}</Text>
-                        </Box>
-                        <Box p={3} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Status</Text>
-                          <Badge colorScheme={STATUS_CONFIG[selectedReport.status]?.color} textTransform="capitalize">
-                            {selectedReport.status}
-                          </Badge>
-                        </Box>
-                        <Box p={3} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Submitted</Text>
-                          <Text fontSize="sm">{formatDate(selectedReport.createdAt)}</Text>
-                        </Box>
-                        <Box p={3} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Location</Text>
-                          <Text fontSize="xs" noOfLines={2}>{selectedReport.location?.address || 'Unknown'}</Text>
-                        </Box>
+                        {[
+                          { label: 'Category', value: selectedReport.category },
+                          { label: 'Status',   value: selectedReport.status   },
+                          { label: 'Submitted',value: formatDate(selectedReport.createdAt) },
+                          { label: 'Location', value: selectedReport.location?.address || 'Unknown' },
+                        ].map(({ label, value }) => (
+                          <Box key={label} p={3} bg={subtleBg} borderRadius="lg">
+                            <Text fontSize="10px" color="gray.400" textTransform="uppercase" letterSpacing="wider">{label}</Text>
+                            <Text fontSize="sm" fontWeight="medium" mt={0.5} textTransform="capitalize" noOfLines={2}>{value}</Text>
+                          </Box>
+                        ))}
                       </SimpleGrid>
                       {selectedReport.escalated && (
-                        <Box p={3} bg="red.50" rounded="lg" borderLeftWidth="3px" borderColor="red.400">
-                          <Text fontSize="xs" color="red.600" fontWeight="bold">⚠️ Escalated</Text>
-                          <Text fontSize="xs" color="red.500">{selectedReport.escalationReason}</Text>
+                        <Box p={3} bg="red.50" borderRadius="lg" borderLeftWidth="3px" borderColor="red.400" _dark={{ bg: 'red.900' }}>
+                          <Text fontSize="xs" color="red.600" fontWeight="bold">⚠️ Escalated — {selectedReport.escalationReason}</Text>
                         </Box>
                       )}
                     </VStack>
                   </TabPanel>
 
-                  {/* ── Tab 2: Priority Score Breakdown ── */}
                   <TabPanel px={0}>
                     {selectedReport.priorityBreakdown ? (
                       <VStack spacing={4} align="stretch">
-                        <Box textAlign="center" p={4} bg={subtleBg} rounded="xl">
-                          <Text fontSize="4xl" fontWeight="bold" color={`${PRIORITY_COLOR[selectedReport.priorityLevel]}.500`}>
-                            {selectedReport.priorityScore}
-                          </Text>
-                          <Text fontSize="sm" color="gray.500">out of 100</Text>
-                          <Badge colorScheme={PRIORITY_COLOR[selectedReport.priorityLevel]} mt={2} px={3} py={1} rounded="full" fontSize="sm">
-                            {selectedReport.priorityLevel} Priority
-                          </Badge>
-                        </Box>
-
-                        <Progress
-                          value={selectedReport.priorityScore || 0}
-                          colorScheme={PRIORITY_COLOR[selectedReport.priorityLevel] || 'gray'}
-                          rounded="full" size="lg"
-                        />
-
+                        <Flex align="center" gap={4} p={4} bg={subtleBg} borderRadius="2xl">
+                          <Box textAlign="center">
+                            <Text fontSize="5xl" fontWeight="extrabold" color={`${PRIORITY_COLOR[selectedReport.priorityLevel]}.500`} lineHeight="1">{selectedReport.priorityScore}</Text>
+                            <Text fontSize="xs" color="gray.400">/ 100</Text>
+                          </Box>
+                          <Box flex={1}>
+                            <Progress value={selectedReport.priorityScore || 0} colorScheme={PRIORITY_COLOR[selectedReport.priorityLevel] || 'gray'} borderRadius="full" size="lg" mb={2} />
+                            <Badge colorScheme={PRIORITY_COLOR[selectedReport.priorityLevel]} borderRadius="full" px={3} py={1}>{selectedReport.priorityLevel} Priority</Badge>
+                          </Box>
+                        </Flex>
                         <Divider />
-
                         {[
-                          { label: '♻️ Resource Score', key: 'resourceScore',  weight: '35%', color: 'teal'   },
-                          { label: '📍 Location Score', key: 'locationScore',  weight: '25%', color: 'blue'   },
-                          { label: '🌦 Weather Score',  key: 'weatherScore',   weight: '20%', color: 'cyan'   },
-                          { label: '💬 Sentiment Score',key: 'sentimentScore', weight: '20%', color: 'purple' },
-                        ].map(({ label, key, weight, color }) => (
+                          { label: '♻️ Resource',  key: 'resourceScore',  color: 'teal',   weight: '35%' },
+                          { label: '📍 Location',  key: 'locationScore',  color: 'blue',   weight: '25%' },
+                          { label: '🌦 Weather',   key: 'weatherScore',   color: 'cyan',   weight: '20%' },
+                          { label: '💬 Sentiment', key: 'sentimentScore', color: 'purple', weight: '20%' },
+                        ].map(({ label, key, color, weight }) => (
                           <Box key={key}>
                             <Flex justify="space-between" mb={1}>
                               <Text fontSize="sm">{label} <Text as="span" fontSize="xs" color="gray.400">({weight})</Text></Text>
-                              <Text fontSize="sm" fontWeight="bold">{selectedReport.priorityBreakdown[key] ?? 'N/A'}/100</Text>
+                              <Text fontSize="sm" fontWeight="bold">{selectedReport.priorityBreakdown[key] ?? 'N/A'}</Text>
                             </Flex>
-                            <Progress value={selectedReport.priorityBreakdown[key] || 0} colorScheme={color} rounded="full" size="sm" />
+                            <Progress value={selectedReport.priorityBreakdown[key] || 0} colorScheme={color} borderRadius="full" size="sm" />
                           </Box>
                         ))}
-
-                        {selectedReport.priorityBreakdown.materials?.length > 0 && (
-                          <Box p={3} bg={subtleBg} rounded="lg">
-                            <Text fontSize="xs" color="gray.500" mb={2}>Detected Materials</Text>
-                            <HStack flexWrap="wrap" gap={2}>
-                              {selectedReport.priorityBreakdown.materials.map((m, i) => (
-                                <Badge key={i} colorScheme="teal" fontSize="xs">{m}</Badge>
-                              ))}
-                            </HStack>
-                          </Box>
-                        )}
-
                         {selectedReport.priorityBreakdown.weatherDetails?.condition && (
-                          <Box p={3} bg={subtleBg} rounded="lg">
-                            <Text fontSize="xs" color="gray.500" mb={1}>Weather at Time of Report</Text>
-                            <Text fontSize="sm">
-                              {selectedReport.priorityBreakdown.weatherDetails.condition} —
-                              {selectedReport.priorityBreakdown.weatherDetails.temp !== null
-                                ? ` ${selectedReport.priorityBreakdown.weatherDetails.temp}°C`
-                                : ' Temperature unavailable'}
-                            </Text>
+                          <Box p={3} bg={subtleBg} borderRadius="lg">
+                            <Text fontSize="xs" color="gray.400" mb={1}>Weather at Report Time</Text>
+                            <Text fontSize="sm">{selectedReport.priorityBreakdown.weatherDetails.condition} — {selectedReport.priorityBreakdown.weatherDetails.temp}°C</Text>
                           </Box>
                         )}
-
-                        <Box p={3} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Sentiment Analysis</Text>
-                          <Badge colorScheme={
-                            selectedReport.priorityBreakdown.sentimentLabel === 'critical' ? 'red' :
-                            selectedReport.priorityBreakdown.sentimentLabel === 'high' ? 'orange' :
-                            selectedReport.priorityBreakdown.sentimentLabel === 'moderate' ? 'yellow' : 'green'
-                          }>
+                        <Box p={3} bg={subtleBg} borderRadius="lg">
+                          <Text fontSize="xs" color="gray.400" mb={1}>Sentiment</Text>
+                          <Badge colorScheme={selectedReport.priorityBreakdown.sentimentLabel === 'critical' ? 'red' : selectedReport.priorityBreakdown.sentimentLabel === 'high' ? 'orange' : 'green'}>
                             {selectedReport.priorityBreakdown.sentimentLabel || 'N/A'}
                           </Badge>
                         </Box>
                       </VStack>
                     ) : (
-                      <Box textAlign="center" py={10}>
-                        <Spinner color="green.500" size="lg" />
-                        <Text mt={4} color="gray.500">AI priority analysis is being calculated…</Text>
-                        <Text fontSize="xs" color="gray.400" mt={1}>Refresh in a few seconds</Text>
-                      </Box>
+                      <Flex py={8} direction="column" align="center" gap={3}>
+                        <Text fontSize="3xl">🤖</Text>
+                        <Text color="gray.500" fontSize="sm" textAlign="center">AI analysis not yet run for this report.</Text>
+                        <Button leftIcon={<FiZap />} colorScheme="orange" size="sm" isLoading={recalcing === selectedReport._id} onClick={(e) => handleRecalculate(selectedReport._id, e)}>
+                          Run Analysis Now
+                        </Button>
+                      </Flex>
                     )}
                   </TabPanel>
 
-                  {/* ── Tab 3: AI Waste Classification ── */}
                   {selectedReport.wasteClassification?.wasteType && (
                     <TabPanel px={0}>
-                      <VStack spacing={4} align="stretch">
-                        <Box p={4} bg="purple.50" rounded="xl" borderLeftWidth="4px" borderColor="purple.400" _dark={{ bg: 'purple.900' }}>
-                          <Text fontSize="lg" fontWeight="bold" color="purple.600">
-                            {selectedReport.wasteClassification.wasteType} Waste
-                          </Text>
-                          <Text fontSize="sm" color="gray.600">{selectedReport.wasteClassification.subType}</Text>
+                      <VStack spacing={3} align="stretch">
+                        <Box p={4} bg="purple.50" borderRadius="xl" borderLeftWidth="4px" borderColor="purple.400" _dark={{ bg: 'purple.900' }}>
+                          <Text fontWeight="bold" color="purple.600" fontSize="lg">{selectedReport.wasteClassification.wasteType} Waste</Text>
+                          <Text fontSize="sm" color="gray.500">{selectedReport.wasteClassification.subType}</Text>
                         </Box>
-
                         <SimpleGrid columns={2} spacing={3}>
                           {[
-                            { label: 'Hazard Level',    value: selectedReport.wasteClassification.hazardLevel,
-                              badgeColor: selectedReport.wasteClassification.hazardLevel === 'High' || selectedReport.wasteClassification.hazardLevel === 'Critical' ? 'red' : 'yellow' },
-                            { label: 'Recyclable',      value: selectedReport.wasteClassification.recyclingPossibility,
-                              badgeColor: selectedReport.wasteClassification.recyclingPossibility === 'Yes' ? 'green' : 'gray' },
-                            { label: 'Action Required', value: selectedReport.wasteClassification.actionRequired,
-                              badgeColor: selectedReport.wasteClassification.actionRequired === 'Immediate' ? 'red' : 'blue' },
-                            { label: 'Decomposition',   value: selectedReport.wasteClassification.estimatedDecompositionDays === -1
-                                ? 'Non-biodegradable'
-                                : `~${selectedReport.wasteClassification.estimatedDecompositionDays} days`,
-                              badgeColor: 'gray' },
+                            { label: 'Hazard Level', value: selectedReport.wasteClassification.hazardLevel, badgeColor: selectedReport.wasteClassification.hazardLevel === 'High' ? 'red' : 'yellow' },
+                            { label: 'Recyclable',   value: selectedReport.wasteClassification.recyclingPossibility, badgeColor: 'green' },
+                            { label: 'Action',       value: selectedReport.wasteClassification.actionRequired, badgeColor: 'blue' },
+                            { label: 'Decomposition',value: selectedReport.wasteClassification.estimatedDecompositionDays === -1 ? 'Non-biodeg.' : `~${selectedReport.wasteClassification.estimatedDecompositionDays}d`, badgeColor: 'gray' },
                           ].map(({ label, value, badgeColor }) => (
-                            <Box key={label} p={3} bg={subtleBg} rounded="lg">
-                              <Text fontSize="xs" color="gray.500" mb={1}>{label}</Text>
-                              <Badge colorScheme={badgeColor} fontSize="xs">{value || 'N/A'}</Badge>
+                            <Box key={label} p={3} bg={subtleBg} borderRadius="lg">
+                              <Text fontSize="10px" color="gray.400">{label}</Text>
+                              <Badge colorScheme={badgeColor} mt={1} fontSize="xs">{value || 'N/A'}</Badge>
                             </Box>
                           ))}
                         </SimpleGrid>
-
-                        <Box p={4} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Disposal Method</Text>
-                          <Text fontSize="sm">{selectedReport.wasteClassification.disposalMethod}</Text>
-                        </Box>
-
-                        <Box p={4} bg={subtleBg} rounded="lg">
-                          <Text fontSize="xs" color="gray.500" mb={1}>Recycling Instructions</Text>
-                          <Text fontSize="sm">{selectedReport.wasteClassification.recyclingInstructions}</Text>
-                        </Box>
-
-                        <Box p={4} bg="orange.50" rounded="lg" borderLeftWidth="3px" borderColor="orange.400" _dark={{ bg: 'orange.900' }}>
-                          <Text fontSize="xs" color="orange.600" fontWeight="bold" mb={1}>⚠️ Environmental Impact</Text>
+                        <Box p={4} bg={subtleBg} borderRadius="lg"><Text fontSize="xs" color="gray.400" mb={1}>Disposal Method</Text><Text fontSize="sm">{selectedReport.wasteClassification.disposalMethod}</Text></Box>
+                        <Box p={4} bg={subtleBg} borderRadius="lg"><Text fontSize="xs" color="gray.400" mb={1}>Recycling Instructions</Text><Text fontSize="sm">{selectedReport.wasteClassification.recyclingInstructions}</Text></Box>
+                        <Box p={4} bg="orange.50" borderRadius="lg" borderLeftWidth="3px" borderColor="orange.400" _dark={{ bg: 'orange.900' }}>
+                          <Text fontSize="xs" color="orange.500" fontWeight="bold" mb={1}>⚠️ Environmental Impact</Text>
                           <Text fontSize="sm">{selectedReport.wasteClassification.environmentalImpact}</Text>
                         </Box>
                       </VStack>
                     </TabPanel>
                   )}
 
-                  {/* ── Tab 4: Smart Recommendations ── */}
                   {selectedReport.recommendations?.immediateActions?.length > 0 && (
                     <TabPanel px={0}>
-                      <VStack spacing={4} align="stretch">
-                        <Box p={4} bg={subtleBg} rounded="lg">
+                      <VStack spacing={3} align="stretch">
+                        <Box p={4} bg={subtleBg} borderRadius="xl">
                           <Text fontWeight="bold" fontSize="sm" mb={3}>Immediate Actions</Text>
-                          <VStack align="start" spacing={2}>
-                            {selectedReport.recommendations.immediateActions.map((action, i) => (
-                              <HStack key={i} align="start" spacing={2}>
-                                <Box minW="20px" h="20px" bg="green.500" borderRadius="full"
-                                  display="flex" alignItems="center" justifyContent="center" mt="1px">
-                                  <Text fontSize="10px" color="white" fontWeight="bold">{i + 1}</Text>
-                                </Box>
-                                <Text fontSize="sm">{action}</Text>
-                              </HStack>
-                            ))}
-                          </VStack>
+                          {selectedReport.recommendations.immediateActions.map((a, i) => (
+                            <HStack key={i} align="start" mb={2} spacing={2}>
+                              <Box minW="20px" h="20px" bg="green.500" borderRadius="full" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+                                <Text fontSize="10px" color="white" fontWeight="bold">{i + 1}</Text>
+                              </Box>
+                              <Text fontSize="sm">{a}</Text>
+                            </HStack>
+                          ))}
                         </Box>
-
                         <SimpleGrid columns={2} spacing={3}>
-                          <Box p={3} bg={subtleBg} rounded="lg">
-                            <Text fontSize="xs" color="gray.500" mb={1}>Authority to Contact</Text>
-                            <Text fontSize="sm" fontWeight="bold">{selectedReport.recommendations.authorityToContact}</Text>
-                          </Box>
-                          <Box p={3} bg={subtleBg} rounded="lg">
-                            <Text fontSize="xs" color="gray.500" mb={1}>How to Contact</Text>
-                            <Text fontSize="sm">{selectedReport.recommendations.contactMethod}</Text>
-                          </Box>
-                          <Box p={3} bg={subtleBg} rounded="lg">
-                            <Text fontSize="xs" color="gray.500" mb={1}>Est. Resolution Time</Text>
-                            <Text fontSize="sm" fontWeight="bold">{selectedReport.recommendations.estimatedResolutionTime}</Text>
-                          </Box>
-                          <Box p={3} bg={subtleBg} rounded="lg">
-                            <Text fontSize="xs" color="gray.500" mb={1}>Community Role</Text>
-                            <Text fontSize="sm">{selectedReport.recommendations.communityRole}</Text>
-                          </Box>
+                          <Box p={3} bg={subtleBg} borderRadius="lg"><Text fontSize="10px" color="gray.400">Authority</Text><Text fontSize="sm" fontWeight="bold">{selectedReport.recommendations.authorityToContact}</Text></Box>
+                          <Box p={3} bg={subtleBg} borderRadius="lg"><Text fontSize="10px" color="gray.400">Est. Resolution</Text><Text fontSize="sm" fontWeight="bold">{selectedReport.recommendations.estimatedResolutionTime}</Text></Box>
                         </SimpleGrid>
-
                         {selectedReport.recommendations.recyclingCenters?.length > 0 && (
                           <Box>
-                            <Text fontWeight="bold" fontSize="sm" mb={3}>Nearby Recycling Centers</Text>
-                            <VStack spacing={2}>
-                              {selectedReport.recommendations.recyclingCenters.map((center, i) => (
-                                <Box key={i} p={4} bg={subtleBg} rounded="lg" w="full" borderLeftWidth="3px" borderColor="teal.400">
-                                  <Text fontSize="sm" fontWeight="bold">{center.name}</Text>
-                                  <Text fontSize="xs" color="gray.500">📍 {center.area}</Text>
-                                  <Text fontSize="xs" color="teal.500">📞 {center.phone}</Text>
-                                  <HStack mt={1} flexWrap="wrap" gap={1}>
-                                    {center.accepts?.map(a => (
-                                      <Badge key={a} fontSize="10px" colorScheme="teal">{a}</Badge>
-                                    ))}
-                                  </HStack>
-                                </Box>
-                              ))}
-                            </VStack>
+                            <Text fontWeight="bold" fontSize="sm" mb={2}>Nearby Recycling Centers</Text>
+                            {selectedReport.recommendations.recyclingCenters.map((c, i) => (
+                              <Box key={i} p={3} bg={subtleBg} borderRadius="lg" mb={2} borderLeftWidth="3px" borderColor="teal.400">
+                                <Text fontSize="sm" fontWeight="bold">{c.name}</Text>
+                                <Text fontSize="xs" color="gray.400">📍 {c.area} · 📞 {c.phone}</Text>
+                              </Box>
+                            ))}
                           </Box>
                         )}
-
                         {selectedReport.recommendations.preventionTips?.length > 0 && (
-                          <Box p={4} bg="blue.50" rounded="lg" _dark={{ bg: 'blue.900' }}>
+                          <Box p={4} bg="blue.50" borderRadius="lg" _dark={{ bg: 'blue.900' }}>
                             <Text fontWeight="bold" fontSize="sm" mb={2} color="blue.600">Prevention Tips</Text>
-                            <VStack align="start" spacing={1}>
-                              {selectedReport.recommendations.preventionTips.map((tip, i) => (
-                                <Text key={i} fontSize="sm">• {tip}</Text>
-                              ))}
-                            </VStack>
+                            {selectedReport.recommendations.preventionTips.map((tip, i) => <Text key={i} fontSize="sm">• {tip}</Text>)}
                           </Box>
                         )}
                       </VStack>

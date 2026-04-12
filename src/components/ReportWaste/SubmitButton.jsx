@@ -72,7 +72,7 @@ const SubmitButton = ({ selectedFile, location, formDetails, placeName }) => {
 
       toast({
         title: 'Report Submitted Successfully!',
-        description: `Your report has been saved with ID: ${response.data.data._id}`,
+        description: `We will try to resolve it as soon as possible.`,
         status: 'success',
         duration: 5000,
         isClosable: true,

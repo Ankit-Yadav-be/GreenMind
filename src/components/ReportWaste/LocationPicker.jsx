@@ -63,24 +63,26 @@ const LocationPicker = ({ location, setLocation, onPlaceNameChange }) => {
   const mapBorderColor = useColorModeValue("gray.300", "gray.600");
   const bg = useColorModeValue("gray.50", "gray.900");
 
-  const getUserLocation = () => {
-    setError("");
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
+const getUserLocation = (showToast = false) => {
+  setError("");
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        if (showToast) {
           toast({
             title: "Location Detected",
             description: "Map centered to your current location.",
             status: "success",
             duration: 3000,
             isClosable: true,
-            position: "top-right", 
+            position: "top-right",
           });
-        },
+        }
+      },
         () => {
           setError("Location access denied or not available.");
         }
@@ -123,9 +125,11 @@ const LocationPicker = ({ location, setLocation, onPlaceNameChange }) => {
     }
   }, [location]);
 
-  useEffect(() => {
-    getUserLocation();
-  }, []);
+useEffect(() => {
+  const hasShownToast = localStorage.getItem('locationToastShown');
+  getUserLocation(!hasShownToast);
+  if (!hasShownToast) localStorage.setItem('locationToastShown', 'true');
+}, []);
 
   return (
     <Box
