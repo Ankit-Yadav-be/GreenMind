@@ -139,6 +139,65 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+const WorkerAssignPanel = ({ reportId, currentWorker, onAssigned }) => {
+  const [workers, setWorkers]     = useState([]);
+  const [selectedWId, setSelWId]  = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const subtleBg = useColorModeValue('gray.50', 'gray.700');
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
+  useEffect(() => {
+    axios.get(`${BACKEND_URL}/api/workers`, { withCredentials: true })
+      .then(r => setWorkers(r.data.data || []))
+      .catch(() => {});
+  }, []);
+
+  const handleAssign = async () => {
+    if (!selectedWId) return;
+    setAssigning(true);
+    try {
+      const { data } = await axios.patch(
+        `${BACKEND_URL}/api/workers/assign/${reportId}`,
+        { workerId: selectedWId },
+        { withCredentials: true }
+      );
+      onAssigned(data.data.report);
+    } catch { /* silent — parent toast handles it */ }
+    finally { setAssigning(false); }
+  };
+
+  return (
+    <Box p={4} bg={subtleBg} borderRadius="xl">
+      {currentWorker?.workerName && (
+        <HStack mb={3} p={2} bg="blue.50" borderRadius="lg" _dark={{ bg:'blue.900' }}>
+          <Icon as={FiCheckCircle} color="blue.500" />
+          <Text fontSize="xs">Currently assigned: <strong>{currentWorker.workerName}</strong></Text>
+        </HStack>
+      )}
+      {workers.length === 0 ? (
+        <Text fontSize="xs" color="gray.400">
+          No workers available. Promote a user to worker role via the API or database.
+        </Text>
+      ) : (
+        <HStack>
+          <Select size="sm" placeholder="Select worker" value={selectedWId}
+            onChange={e => setSelWId(e.target.value)} borderRadius="lg">
+            {workers.map(w => (
+              <option key={w._id} value={w._id}>
+                {w.name} {w.workerProfile?.area ? `(${w.workerProfile.area})` : ''} {!w.workerProfile?.isAvailable ? '— Busy' : ''}
+              </option>
+            ))}
+          </Select>
+          <Button size="sm" colorScheme="teal" isLoading={assigning}
+            isDisabled={!selectedWId} onClick={handleAssign} flexShrink={0}>
+            Assign
+          </Button>
+        </HStack>
+      )}
+    </Box>
+  );
+};
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const [reports, setReports]         = useState([]);
@@ -676,20 +735,30 @@ const AdminDashboard = () => {
 
                       <Divider/>
 
-                      <Box>
-                        <Text fontSize="sm" fontWeight="bold" mb={3} color="gray.600">Other Operations</Text>
-                        <HStack spacing={3} flexWrap="wrap">
-                          <Button leftIcon={<FiZap/>} colorScheme="orange" size="sm" variant="outline"
-                            isLoading={recalcing} loadingText="Analyzing…"
-                            onClick={() => handleRecalculate(selectedReport._id)}>
-                            Re-run AI Analysis
-                          </Button>
-                          <Button leftIcon={<FiTrash2/>} colorScheme="red" size="sm" variant="outline"
-                            onClick={() => handleDelete(selectedReport._id)}>
-                            Delete Report
-                          </Button>
-                        </HStack>
-                      </Box>
+                 <Box>
+  <Text fontSize="sm" fontWeight="bold" mb={3} color="gray.600">Other Operations</Text>
+  <HStack spacing={3} flexWrap="wrap" mb={4}>
+    <Button leftIcon={<FiZap/>} colorScheme="orange" size="sm" variant="outline"
+      isLoading={recalcing} loadingText="Analyzing…"
+      onClick={() => handleRecalculate(selectedReport._id)}>
+      Re-run AI Analysis
+    </Button>
+    <Button leftIcon={<FiTrash2/>} colorScheme="red" size="sm" variant="outline"
+      onClick={() => handleDelete(selectedReport._id)}>
+      Delete Report
+    </Button>
+  </HStack>
+</Box>
+
+{/* Worker Assignment Section */}
+<Box>
+  <Text fontSize="sm" fontWeight="bold" mb={3} color="gray.600">Assign Worker</Text>
+  <WorkerAssignPanel reportId={selectedReport._id} currentWorker={selectedReport.assignedWorker} onAssigned={(updated) => {
+    setReports(prev => prev.map(r => r._id === updated._id ? updated : r));
+    setSelected(updated);
+    toast({ title: 'Worker assigned', status: 'success', duration: 3000, position: 'top-right' });
+  }} />
+</Box>
                     </VStack>
                   </TabPanel>
 
