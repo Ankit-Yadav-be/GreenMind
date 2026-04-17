@@ -13,6 +13,7 @@ import {
 } from '@chakra-ui/react';
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import { Link as RouterLink } from 'react-router-dom';
+import HelplineSection from './HelplineSection';
 
 const SocialButton = ({ children, label, href }) => (
   <chakra.button
@@ -131,6 +132,9 @@ const Footer = () => {
           </Box>
         </Stack>
       </Container>
+    
+      <HelplineSection />
+      <Container as={Stack} maxW={'7xl'} spacing={10}></Container>
 
       {/* Bottom Copy */}
       <Text

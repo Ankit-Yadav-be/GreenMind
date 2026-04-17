@@ -5,7 +5,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
-import { FaPlusCircle, FaUserShield, FaSignOutAlt, FaTrophy, FaLeaf } from 'react-icons/fa';
+import { FaPlusCircle, FaUserShield, FaSignOutAlt, FaTrophy, FaLeaf, FaBullhorn } from 'react-icons/fa';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from './shared/NotificationBell';
 
@@ -13,12 +13,14 @@ const userLinks = [
   { label: 'Home',         to: '/' },
   { label: 'Report Waste', to: '/report',      icon: FaPlusCircle },
   { label: 'My Reports',   to: '/myreports' },
+  { label: 'Campaigns',    to: '/campaigns',   icon: FaBullhorn },
   { label: 'Leaderboard',  to: '/leaderboard', icon: FaTrophy },
 ];
 
 const adminLinks = [
   { label: 'Waste List',   to: '/wastelist' },
   { label: 'Map',          to: '/map' },
+  { label: 'Campaigns',    to: '/admin/campaigns' },
   { label: 'Admin',        to: '/admin',        icon: FaUserShield },
 ];
 

@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import Campaigns from './pages/Campaigns';
+import AdminCampaigns from './pages/AdminCampaigns';
 
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -14,6 +16,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import MapPage from './pages/MapPage';
 import Leaderboard from './pages/Leaderboard';
 import NotFound from './pages/NotFound';
+import ChatbotWidget from './components/chatbot/ChatbotWidget';
+import WorkerPortal       from './pages/WorkerPortal';
+import SubAdminDashboard  from './pages/SubAdminDashboard';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
@@ -33,7 +38,7 @@ const App = () => {
           setIsAuthenticated(true);
           setUserRole(data.user?.role || 'user');
         }
-      } catch (_) {}
+      } catch (_) { }
       finally {
         setLoading(false);
       }
@@ -107,11 +112,37 @@ const App = () => {
           </ProtectedRoute>
         } />
 
+        <Route path="/campaigns" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+            <Campaigns />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/campaigns" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} requiredRole="admin">
+            <AdminCampaigns />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/worker-portal" element={
+  <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+    <WorkerPortal />
+  </ProtectedRoute>
+} />
+<Route path="/sub-admin" element={
+  <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+    <SubAdminDashboard userRole={userRole} />
+  </ProtectedRoute>
+} />
+
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />
       </Routes>
 
       {isAuthenticated && <Footer />}
+      {isAuthenticated && (
+        <ChatbotWidget userRole={userRole || 'user'} />
+      )}
     </Router>
   );
 };

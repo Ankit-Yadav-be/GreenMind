@@ -11,6 +11,7 @@ import {
 import { FaMapMarkerAlt, FaClock } from 'react-icons/fa';
 import { FiRefreshCw, FiEye, FiZap } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import ReportProgressTracker from '../components/ReportProgressTracker';
 
 const MotionBox = motion(Box);
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -172,6 +173,16 @@ const MyReports = () => {
                       )}
                     </HStack>
 
+                    {report.progressPercentage !== undefined && (
+  <Box mb={3}>
+    <Flex justify="space-between" mb={1}>
+      <Text fontSize="xs" color="gray.500">Progress</Text>
+      <Text fontSize="xs" fontWeight="bold">{report.progressPercentage}%</Text>
+    </Flex>
+    <Progress value={report.progressPercentage || 0} size="sm" borderRadius="full" colorScheme={report.progressPercentage === 100 ? 'green' : 'blue'} />
+  </Box>
+)}
+
                     <Text fontSize="sm" color={useColorModeValue('gray.700', 'gray.200')} noOfLines={2} mb={3} lineHeight="1.5">
                       {report.description}
                     </Text>
@@ -219,13 +230,17 @@ const MyReports = () => {
             <ModalCloseButton />
             <ModalBody pb={6}>
               <Tabs colorScheme="green" variant="soft-rounded" size="sm">
-                <TabList flexWrap="wrap" gap={1} mb={4}>
-                  <Tab>Details</Tab>
-                  <Tab>Priority Score</Tab>
-                  {selectedReport.wasteClassification?.wasteType && <Tab>AI Classification</Tab>}
-                  {selectedReport.recommendations?.immediateActions?.length > 0 && <Tab>Recommendations</Tab>}
-                </TabList>
+            <TabList flexWrap="wrap" gap={1} mb={4}>
+  <Tab>Progress</Tab>
+  <Tab>Details</Tab>
+  <Tab>Priority Score</Tab>
+  {selectedReport.wasteClassification?.wasteType && <Tab>AI Classification</Tab>}
+  {selectedReport.recommendations?.immediateActions?.length > 0 && <Tab>Recommendations</Tab>}
+</TabList>
                 <TabPanels>
+                    <TabPanel px={0}>
+    <ReportProgressTracker report={selectedReport} />
+  </TabPanel>
                   <TabPanel px={0}>
                     <VStack spacing={4} align="stretch">
                       <Image src={selectedReport.images[0]?.url} h="220px" objectFit="cover" borderRadius="xl" fallbackSrc="https://via.placeholder.com/600x220?text=No+Image" />
