@@ -82,7 +82,7 @@ const Footer = () => {
               { label: 'Home', to: '/' },
               { label: 'Report Waste', to: '/report' },
               { label: 'My Reports', to: '/myreports' },
-              { label: 'Admin Dashboard', to: '/admin' },
+            
             ].map((link) => (
               <Link
                 as={RouterLink}

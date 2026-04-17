@@ -96,8 +96,20 @@ const Navbar = ({ isAuthenticated, setIsAuthenticated, userRole, setUserRole }) 
   const navigate = useNavigate();
   const toast = useToast();
 
-  const navLinks = userRole === 'admin'
+const workerLinks = [
+  { label: 'My Tasks', to: '/worker-portal' },
+];
+const subAdminLinks = [
+  { label: 'Sub-Admin Panel', to: '/sub-admin' },
+];
+
+const navLinks =
+  userRole === 'admin' || userRole === 'super_admin'
     ? [...userLinks, ...adminLinks]
+    : userRole === 'worker'
+    ? workerLinks
+    : userRole === 'category_head' || userRole === 'area_head'
+    ? [...userLinks, ...subAdminLinks]
     : userLinks;
 
   const handleLogout = async () => {

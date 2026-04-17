@@ -17,8 +17,8 @@ import MapPage from './pages/MapPage';
 import Leaderboard from './pages/Leaderboard';
 import NotFound from './pages/NotFound';
 import ChatbotWidget from './components/chatbot/ChatbotWidget';
-import WorkerPortal       from './pages/WorkerPortal';
-import SubAdminDashboard  from './pages/SubAdminDashboard';
+import WorkerPortal from './pages/WorkerPortal';
+import SubAdminDashboard from './pages/SubAdminDashboard';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
@@ -125,15 +125,15 @@ const App = () => {
         } />
 
         <Route path="/worker-portal" element={
-  <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
-    <WorkerPortal />
-  </ProtectedRoute>
-} />
-<Route path="/sub-admin" element={
-  <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
-    <SubAdminDashboard userRole={userRole} />
-  </ProtectedRoute>
-} />
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} requiredRole="worker">
+            <WorkerPortal />
+          </ProtectedRoute>
+        } />
+        <Route path="/sub-admin" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole}>
+            <SubAdminDashboard userRole={userRole} />
+          </ProtectedRoute>
+        } />
 
         {/* Fallback */}
         <Route path="*" element={<NotFound />} />

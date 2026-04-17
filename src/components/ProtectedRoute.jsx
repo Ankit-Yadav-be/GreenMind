@@ -7,10 +7,13 @@ const ProtectedRoute = ({ isAuthenticated, userRole, requiredRole, children }) =
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole === 'admin' && userRole !== 'admin') {
-    // Logged in but not admin — send to home
-    return <Navigate to="/" replace />;
-  }
+const ADMIN_ROLES = ['admin', 'super_admin', 'category_head', 'area_head'];
+if (requiredRole === 'admin' && !ADMIN_ROLES.includes(userRole)) {
+  return <Navigate to="/" replace />;
+}
+if (requiredRole && requiredRole !== 'admin' && userRole !== requiredRole) {
+  return <Navigate to="/" replace />;
+}
 
   return children;
 };
