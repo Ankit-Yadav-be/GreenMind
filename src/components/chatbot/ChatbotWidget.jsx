@@ -21,17 +21,30 @@ const detectPage = () => {
   return 'home';
 };
 
-// Format bot message — convert **bold** to styled spans
 const FormattedText = ({ content }) => {
-  const parts = content.split(/(\*\*[^*]+\*\*)/g);
+  // Clean raw markdown artifacts before rendering
+const clean = (text) => text
+    .replace(/^#{1,6}\s+/gm, '')                    // remove # headings
+    .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')           // remove ***bold italic*** first
+    .replace(/___([^_]+)___/g, '$1')                 // remove ___text___
+    .replace(/\*\*([^*]+)\*\*/g, '$1')               // remove **bold** (keep plain text)
+    .replace(/\*([^*\n]+)\*/g, '$1')                 // remove *italic* single stars
+    .replace(/_([^_\n]+)_/g, '$1')                   // remove _italic_ underscores
+    .replace(/`{3}[\s\S]*?`{3}/g, '')                // remove code blocks
+    .replace(/`([^`]+)`/g, '$1')                     // remove inline code ticks
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')         // convert [text](url) to text
+    .replace(/^>\s+/gm, '')                          // remove blockquote >
+    .replace(/---+/g, '')                            // remove dividers
+    .replace(/^\s*[-+]\s+/gm, '• ')                  // convert - and + list items to bullets
+    .replace(/^\s*\*\s+/gm, '• ')                    // convert * list items to bullets (after bold/italic removal)
+    .replace(/\n{3,}/g, '\n\n')                      // collapse extra blank lines
+    .trim();
+
+const cleaned = clean(content);
+
   return (
-    <Text fontSize="sm" lineHeight="1.7" whiteSpace="pre-wrap" wordBreak="break-word">
-      {parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <Text as="span" key={i} fontWeight="bold">{part.slice(2, -2)}</Text>;
-        }
-        return <Text as="span" key={i}>{part}</Text>;
-      })}
+    <Text fontSize="sm" lineHeight="1.8" whiteSpace="pre-wrap" wordBreak="break-word">
+      {cleaned}
     </Text>
   );
 };
@@ -204,10 +217,10 @@ const ChatbotWidget = ({ userRole = 'user' }) => {
         }))
         .filter(m => m.content.length > 0);
 
-      const response = await fetch(`${BACKEND_URL}/api/chatbot/message`, {
+    const response = await fetch(`${BACKEND_URL}/api/chatbot/message`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        // NOTE: removed credentials: 'include' — chatbot doesn't need auth cookies
+        credentials: 'include', // needed so server can identify user for personal context
         body: JSON.stringify({
           messages: history,
           userRole,

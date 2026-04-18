@@ -187,7 +187,7 @@ const MyReports = () => {
                       {report.description}
                     </Text>
                     <Divider mb={3} />
-                    <Stack spacing={1.5}>
+                   <Stack spacing={1.5}>
                       <HStack fontSize="xs" color="gray.400" spacing={1.5}>
                         <Icon as={FaMapMarkerAlt} flexShrink={0} />
                         <Text noOfLines={1}>{report.location?.address || `${report.location?.coordinates[1]?.toFixed(4)}, ${report.location?.coordinates[0]?.toFixed(4)}`}</Text>
@@ -196,6 +196,14 @@ const MyReports = () => {
                         <Icon as={FaClock} flexShrink={0} />
                         <Text>{formatDate(report.createdAt)}</Text>
                       </HStack>
+                      {report.assignedWorker?.workerName && (
+                        <HStack fontSize="xs" color="blue.500" spacing={1.5}>
+                          <Text fontSize="12px">👷</Text>
+                          <Text fontWeight="medium" noOfLines={1}>
+                            Handled by: {report.assignedWorker.workerName}
+                          </Text>
+                        </HStack>
+                      )}
                     </Stack>
                     <Button size="xs" leftIcon={<FiEye />} colorScheme="green" variant="ghost" mt={3} w="full" borderRadius="lg">
                       View Full Analysis
@@ -258,6 +266,44 @@ const MyReports = () => {
                           </Box>
                         ))}
                       </SimpleGrid>
+                    {/* ── Assigned Worker Info ── */}
+                      {selectedReport.assignedWorker?.workerName ? (
+                        <Box p={4} bg="blue.50" borderRadius="xl" borderLeftWidth="4px" borderColor="blue.400" _dark={{ bg: 'blue.900' }}>
+                          <HStack mb={2}>
+                            <Text fontSize="16px">👷</Text>
+                            <Text fontSize="sm" fontWeight="bold" color="blue.600" _dark={{ color: 'blue.300' }}>
+                              Worker Assigned
+                            </Text>
+                          </HStack>
+                          <SimpleGrid columns={2} spacing={3}>
+                            <Box>
+                              <Text fontSize="10px" color="gray.400" textTransform="uppercase" letterSpacing="wider">Worker Name</Text>
+                              <Text fontSize="sm" fontWeight="semibold" mt={0.5}>{selectedReport.assignedWorker.workerName}</Text>
+                            </Box>
+                            <Box>
+                              <Text fontSize="10px" color="gray.400" textTransform="uppercase" letterSpacing="wider">Assigned On</Text>
+                              <Text fontSize="sm" fontWeight="semibold" mt={0.5}>
+                                {selectedReport.assignedWorker.assignedAt
+                                  ? new Date(selectedReport.assignedWorker.assignedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                                  : 'Recently'}
+                              </Text>
+                            </Box>
+                          </SimpleGrid>
+                          <Text fontSize="xs" color="blue.500" mt={2} _dark={{ color: 'blue.300' }}>
+                            ✅ Your complaint is being handled by a verified field worker
+                          </Text>
+                        </Box>
+                      ) : selectedReport.status === 'in-progress' ? (
+                        <Box p={3} bg="yellow.50" borderRadius="xl" borderLeftWidth="4px" borderColor="yellow.400" _dark={{ bg: 'yellow.900' }}>
+                          <HStack>
+                            <Text fontSize="14px">🔄</Text>
+                            <Text fontSize="sm" color="yellow.700" _dark={{ color: 'yellow.300' }}>
+                              Worker assignment in progress — you will be notified shortly.
+                            </Text>
+                          </HStack>
+                        </Box>
+                      ) : null}
+
                       {selectedReport.escalated && (
                         <Box p={3} bg="red.50" borderRadius="lg" borderLeftWidth="3px" borderColor="red.400" _dark={{ bg: 'red.900' }}>
                           <Text fontSize="xs" color="red.600" fontWeight="bold">⚠️ Escalated — {selectedReport.escalationReason}</Text>
