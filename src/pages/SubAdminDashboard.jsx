@@ -21,6 +21,7 @@ import {
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import PriorityBadge from '../components/shared/PriorityBadge';
+import WorkerPerformancePanel from '../components/WorkerPerformancePanel';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const MotionBox = motion(Box);
@@ -410,6 +411,18 @@ const SubAdminDashboard = ({ userRole }) => {
             </Flex>
           </Box>
         )}
+      {/* ── Workers in My Area ── */}
+        <Box bg={cardBg} borderRadius="2xl" boxShadow="md" borderWidth="1px" borderColor={borderCol} overflow="hidden" mt={4}>
+          <Box px={6} py={4} borderBottomWidth="1px" borderColor={borderCol}>
+            <Text fontWeight="bold" fontSize="md">👷 Workers in My Area</Text>
+            <Text fontSize="xs" color="gray.400">
+              {profile?.adminProfile?.area
+                ? `Showing workers assigned to: ${profile.adminProfile.area}`
+                : 'Showing all workers in your scope'}
+            </Text>
+          </Box>
+          <WorkerPerformancePanel filterArea={profile?.adminProfile?.area || ''} />
+        </Box>
       </Container>
 
       {/* ── Management Modal ── */}

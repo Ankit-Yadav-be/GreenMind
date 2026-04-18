@@ -24,6 +24,8 @@ import {
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import PriorityBadge from '../components/shared/PriorityBadge';
+import WorkerPerformancePanel from '../components/WorkerPerformancePanel';
+import AreaPerformancePanel from '../components/AreaPerformancePanel';
 
 const API_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api/reports`;
 const MotionBox = motion(Box);
@@ -462,6 +464,24 @@ const AdminDashboard = () => {
               );
             })}
           </Flex>
+        </Box>
+
+       {/* ── Worker Performance ── */}
+        <Box bg={cardBg} borderRadius="2xl" boxShadow="md" borderWidth="1px" borderColor={borderColor} overflow="hidden" mb={4}>
+          <Box px={6} py={4} borderBottomWidth="1px" borderColor={borderColor}>
+            <Text fontWeight="bold" fontSize="md">👷 Worker Performance</Text>
+            <Text fontSize="xs" color="gray.400">Task completion rates and availability of all field workers</Text>
+          </Box>
+          <WorkerPerformancePanel />
+        </Box>
+
+        {/* ── Area Performance ── */}
+        <Box bg={cardBg} borderRadius="2xl" boxShadow="md" borderWidth="1px" borderColor={borderColor} overflow="hidden" mb={4}>
+          <Box px={6} py={4} borderBottomWidth="1px" borderColor={borderColor}>
+            <Text fontWeight="bold" fontSize="md">📍 Area-wise Performance</Text>
+            <Text fontSize="xs" color="gray.400">Resolution rates by area — click Message to advise area heads</Text>
+          </Box>
+          <AreaPerformancePanel />
         </Box>
 
         {/* Reports Table */}
