@@ -52,11 +52,13 @@ const Login = ({ setIsAuthenticated, setUserRole }) => {
   setIsAuthenticated(true);
   setUserRole(data.user.role);
   toast({ title: 'Login successful', status: 'success', duration: 2000, isClosable: true });
+  const redirectTo = sessionStorage.getItem('redirectAfterLogin');
+  sessionStorage.removeItem('redirectAfterLogin');
   const role = data.user.role;
   if (role === 'admin' || role === 'super_admin') navigate('/admin');
   else if (role === 'category_head' || role === 'area_head') navigate('/sub-admin');
   else if (role === 'worker') navigate('/worker-portal');
-  else navigate('/');
+  else navigate(redirectTo || '/');
 }
     } catch (err) {
       toast({ title: 'Login failed', description: 'Please try again', status: 'error', duration: 3000 });
@@ -80,10 +82,12 @@ const handleDevLogin = async () => {
   setUserRole(data.user.role);
   toast({ title: `Logged in as ${data.user.name} (${data.user.role})`, status: 'success', duration: 2000 });
   const role = data.user.role;
+  const redirectTo = sessionStorage.getItem('redirectAfterLogin');
+  sessionStorage.removeItem('redirectAfterLogin');
   if (role === 'admin' || role === 'super_admin') navigate('/admin');
   else if (role === 'category_head' || role === 'area_head') navigate('/sub-admin');
   else if (role === 'worker') navigate('/worker-portal');
-  else navigate('/');
+  else navigate(redirectTo || '/');
 } else {
       toast({ title: data.message || 'Login failed', status: 'error', duration: 3000 });
     }
