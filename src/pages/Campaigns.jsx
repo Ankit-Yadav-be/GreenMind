@@ -7,7 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { FiCalendar, FiMapPin, FiUsers, FiClock, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import CampaignRegistrationModal from '../components/Campaign/CampaignRegistrationModal';
+import CampaignRegistrationModal from '../components/campaign/CampaignRegistrationModal';
 
 const MotionBox = motion(Box);
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
